@@ -15,23 +15,23 @@ export default function Footer() {
               rel="noopener noreferrer"
               className="text-gray-400 hover:text-white transition-colors duration-200"
             >
-              Nhà tài trợ 1
+              GK88
             </a>
             <a 
-              href="https://example-sponsor-2.com" 
+              href="https://vipwin358.com/" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-gray-400 hover:text-white transition-colors duration-200"
             >
-              Nhà tài trợ 2
+              VIPwin
             </a>
             <a 
-              href="https://example-sponsor-3.com" 
+              href="https://hb88co.com/" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-gray-400 hover:text-white transition-colors duration-200"
             >
-              Nhà tài trợ 3
+              HB88
             </a>
           </div>
         </div>
