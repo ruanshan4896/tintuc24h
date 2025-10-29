@@ -75,10 +75,10 @@ export default function Header() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Tìm kiếm..."
-                className="w-48 px-3 py-1.5 pr-8 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-48 px-3 py-1.5 pr-12 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <button type="submit" className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-600 hover:text-blue-600 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Tìm kiếm">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button type="submit" className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-600 hover:text-blue-600 p-2 min-w-[40px] min-h-[40px] flex items-center justify-center" aria-label="Tìm kiếm">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </button>
@@ -102,20 +102,24 @@ export default function Header() {
       {/* Backdrop */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden transition-opacity"
+          className="fixed inset-0 bg-black bg-opacity-50 z-[100] md:hidden transition-opacity"
           onClick={() => setMobileMenuOpen(false)}
+          aria-hidden="true"
         />
       )}
 
       {/* Sidebar */}
       <div
-        className={`fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-50 md:hidden transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-[110] md:hidden transform transition-transform duration-300 ease-in-out ${
           mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mobile-menu-title"
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
-          <span className="text-xl font-bold text-blue-600">📰 Menu</span>
+          <span id="mobile-menu-title" className="text-xl font-bold text-blue-600">📰 Menu</span>
           <button
             onClick={() => setMobileMenuOpen(false)}
             className="text-gray-700 hover:text-gray-900 transition p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
@@ -180,24 +184,26 @@ export default function Header() {
             {/* Search */}
             <div className="pt-4">
               <p className="text-xs font-semibold text-gray-500 uppercase px-4 mb-2">Tìm kiếm</p>
-              <form onSubmit={handleSearch} className="relative px-4">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Tìm kiếm bài viết..."
-                  className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <button
-                  type="submit"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-blue-600 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
-                  aria-label="Tìm kiếm"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </button>
-              </form>
+              <div className="px-4">
+                <form onSubmit={handleSearch} className="relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Tìm kiếm bài viết..."
+                    className="w-full px-4 py-3 pr-14 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <button
+                    type="submit"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-600 hover:text-blue-600 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                    aria-label="Tìm kiếm"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         </div>
