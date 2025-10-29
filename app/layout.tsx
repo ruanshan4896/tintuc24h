@@ -1,18 +1,38 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
-const inter = Inter({ subsets: ['latin', 'vietnamese'] });
+// Optimize font loading
+const inter = Inter({ 
+  subsets: ['latin', 'vietnamese'],
+  display: 'swap',
+  preload: true,
+  fallback: ['system-ui', 'arial'],
+  adjustFontFallback: true,
+  variable: '--font-inter',
+});
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#3B82F6' },
+    { media: '(prefers-color-scheme: dark)', color: '#1E40AF' },
+  ],
+};
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://tintuc24h-seven.vercel.app'),
   title: {
     default: 'TinTức - Website Tin Tức Hiện Đại',
     template: '%s | TinTức'
   },
   description: 'Website tin tức được xây dựng với Next.js và Supabase. Cập nhật tin tức công nghệ, SEO và nhiều chủ đề khác.',
-  keywords: ['tin tức', 'news', 'công nghệ', 'SEO', 'Next.js', 'Vietnam'],
+  keywords: ['tin tức', 'news', 'công nghệ', 'SEO', 'Next.js', 'Vietnam', 'thể thao', 'sức khỏe', 'ô tô', 'giải trí'],
   authors: [{ name: 'TinTức Team' }],
   creator: 'TinTức',
   publisher: 'TinTức',
@@ -24,7 +44,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'vi_VN',
-    url: 'https://tintuc.vercel.app',
+    url: '/',
     siteName: 'TinTức',
     title: 'TinTức - Website Tin Tức Hiện Đại',
     description: 'Website tin tức được xây dựng với Next.js và Supabase',
@@ -57,6 +77,10 @@ export const metadata: Metadata = {
   verification: {
     google: 'Smfp6CDotxjXnPeit-7Kw41bOvV1McfSzgqwTZDzq3o',
   },
+  alternates: {
+    canonical: '/',
+  },
+  category: 'news',
 };
 
 export default function RootLayout({
@@ -65,11 +89,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="vi" suppressHydrationWarning>
+    <html lang="vi" suppressHydrationWarning className={inter.variable}>
+      <head>
+        {/* Preconnect to external domains */}
+        <link rel="preconnect" href="https://images.unsplash.com" />
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        
+        {/* Favicon optimized */}
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="apple-touch-icon" href="/favicon.ico" />
+      </head>
       <body className={inter.className} suppressHydrationWarning>
         <div className="flex flex-col min-h-screen">
           <Header />
-          <main className="flex-grow">
+          <main className="flex-grow" id="main-content">
             {children}
           </main>
           <Footer />

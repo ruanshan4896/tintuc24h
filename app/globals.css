@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+/* Hide scrollbar for slider */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Custom styles for prose (markdown) readability */
 .prose {
   color: #111827; /* gray-900 */
