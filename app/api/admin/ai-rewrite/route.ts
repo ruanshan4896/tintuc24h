@@ -30,7 +30,7 @@ function cleanMarkdownOutput(content: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const { content, title, tone = 'professional', provider = 'google' } = await request.json();
+    const { content, title, tone = 'professional', provider = 'google', generateMetadata = true } = await request.json();
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🤖 AI REWRITE DEBUG START');
@@ -111,26 +111,44 @@ Nội dung tiếp theo...
 
 ## YÊU CẦU QUAN TRỌNG NHẤT - VIẾT KHÁC BIỆT 100%:
 
-### 1. PARAPHRASE TRIỆT ĐỂ (CRITICAL!)
+### 1. VĂN PHONG BÁO CHÍ CHUYÊN NGHIỆP (CRITICAL!)
+
+**TONE & STYLE:**
+- ✅ Văn phong **báo chí**, **khách quan**, **đáng tin cậy**
+- ✅ Sử dụng **số liệu, thống kê, trích dẫn** từ bài gốc
+- ✅ Trích dẫn nguồn: "theo...", "nghiên cứu cho thấy...", "chuyên gia nhận định..."
+- ✅ Phân tích sâu, đa chiều, không chỉ tóm tắt bề mặt
+- ❌ KHÔNG dùng ngôn ngữ cảm tính, clickbait, cường điệu quá mức
+
+**GIỮ NGUYÊN & NHẤN MẠNH:**
+- 🔢 **Số liệu cụ thể** (%, số người, giá trị, thời gian)
+- 📊 **Thống kê, nghiên cứu** (tên tác giả, tổ chức, năm)
+- 👤 **Trích dẫn chuyên gia** (tên, chức danh, ý kiến)
+- 📅 **Thời gian, địa điểm** quan trọng
+- 💰 **Giá cả, chi phí** cụ thể
+
+### 2. PARAPHRASE TRIỆT ĐỂ (nhưng giữ thông tin quan trọng!)
 ❌ **TUYỆT ĐỐI KHÔNG:**
-- Copy bất kỳ câu nào từ bài gốc (kể cả thay đổi 1-2 từ)
+- Copy nguyên văn bất kỳ câu nào từ bài gốc
 - Giữ nguyên cấu trúc câu của bài gốc
-- Sử dụng cụm từ giống hệt bài gốc
+- Bỏ sót số liệu, thống kê quan trọng
 
 ✅ **BẮT BUỘC PHẢI:**
 - VIẾT LẠI mỗi câu với cấu trúc HOÀN TOÀN KHÁC
-- Thay đổi thứ tự trình bày thông tin
-- Sử dụng từ đồng nghĩa, cách diễn đạt khác
-- Thêm giải thích, context, ví dụ mới
-- Viết như BẠN ĐANG KỂ CHUYỆN cho người khác nghe
+- **GIỮ NGUYÊN** số liệu, tên riêng, trích dẫn chuyên gia
+- Thêm phân tích sâu hơn về ý nghĩa của số liệu
+- Đặt thông tin vào context rộng hơn
+- Giải thích tại sao số liệu này quan trọng
 
-**VÍ DỤ CÁCH PARAPHRASE:**
+**VÍ DỤ CÁCH PARAPHRASE (GIỮ SỐ LIỆU):**
 
-Bài gốc: "Ô nhiễm không khí ở Hà Nội đang ở mức nghiêm trọng với chỉ số AQI vượt 200."
+Bài gốc: "Theo nghiên cứu của WHO năm 2024, ô nhiễm không khí ở Hà Nội đạt chỉ số AQI 215, vượt mức an toàn 2,5 lần."
 
-❌ SAI (quá giống): "Tình trạng ô nhiễm không khí tại Hà Nội đang rất nghiêm trọng khi chỉ số AQI đã vượt mức 200."
+❌ SAI (mất số liệu): "Không khí Hà Nội rất ô nhiễm."
 
-✅ ĐÚNG (khác biệt): "Chất lượng không khí tại thủ đô đang báo động đỏ. Các thiết bị đo lường cho thấy nồng độ bụi mịn đã vượt ngưỡng an toàn gấp đôi, khiến nhiều chuyên gia y tế lo ngại về sức khỏe cộng đồng."
+❌ SAI (giống gốc): "Theo nghiên cứu của WHO năm 2024, tình trạng ô nhiễm không khí tại Hà Nội đã đạt mức AQI 215, vượt ngưỡng an toàn 2,5 lần."
+
+✅ ĐÚNG (giữ số liệu + khác biệt): "Báo cáo mới nhất từ Tổ chức Y tế Thế giới (WHO) công bố vào năm 2024 cho thấy, chất lượng không khí tại thủ đô Hà Nội đã lên đến **215 điểm AQI** - một con số đáng báo động khi cao gấp **2,5 lần** so với ngưỡng an toàn mà tổ chức này khuyến nghị. Điều này đặt ra những lo ngại nghiêm trọng về tác động đến sức khỏe cộng đồng, đặc biệt là trẻ em và người cao tuổi."
 
 ### 2. THAY ĐỔI CẤU TRÚC & THỨ TỰ
 - Đảo ngược thứ tự các đoạn (kết luận → nguyên nhân → giải pháp)
@@ -242,7 +260,36 @@ ${content}
 
 ---
 
-**BẮT ĐẦU VIẾT BÀI NGAY - CHỈ TRẢ VỀ MARKDOWN (không có wrapper \`\`\`markdown, không giải thích):**`;
+**BẮT ĐẦU VIẾT BÀI NGAY - CHỈ TRẢ VỀ MARKDOWN (không có wrapper \`\`\`markdown, không giải thích):**
+
+---
+
+${generateMetadata ? `
+**QUAN TRỌNG - TẠO METADATA SEO:**
+
+Sau khi viết xong bài, thêm 2 dòng cuối cùng (bắt đầu với "---"):
+
+\`\`\`
+---
+SEO_TITLE: [Tiêu đề SEO mới 50-60 ký tự, KHÁC BẢN GỐC, có keyword]
+SEO_DESC: [Mô tả ngắn gọn 140-155 ký tự, tóm tắt nội dung chính, có CTA]
+\`\`\`
+
+**YÊU CẦU:**
+- SEO_TITLE: Viết LẠI hoàn toàn, KHÁC tiêu đề gốc, hấp dẫn, có số liệu nếu có
+- SEO_DESC: Ngắn gọn, súc tích, hook + benefit + CTA
+- Đặt ở CUỐI CÙNG của bài viết
+
+**VÍ DỤ:**
+\`\`\`
+[... Nội dung bài viết ở đây ...]
+
+---
+SEO_TITLE: Ô Nhiễm Hà Nội Vượt 215 AQI: Cách Bảo Vệ Sức Khỏe
+SEO_DESC: Chỉ số AQI Hà Nội vượt mức an toàn 2,5 lần. Tìm hiểu tác động và biện pháp phòng tránh hiệu quả cho gia đình bạn.
+\`\`\`
+` : ''}`;
+
 
 
     // Call AI API based on provider
@@ -375,11 +422,30 @@ ${content}
     // Clean up AI output: Remove markdown code fence wrappers
     rewrittenContent = cleanMarkdownOutput(rewrittenContent);
 
+    // Extract metadata if present
+    let seoTitle = '';
+    let seoDescription = '';
+    let finalContent = rewrittenContent;
+
+    if (generateMetadata) {
+      const metadataMatch = rewrittenContent.match(/---\s*\nSEO_TITLE:\s*(.+)\s*\nSEO_DESC:\s*(.+)\s*$/s);
+      if (metadataMatch) {
+        seoTitle = metadataMatch[1].trim();
+        seoDescription = metadataMatch[2].trim();
+        // Remove metadata from content
+        finalContent = rewrittenContent.replace(/---\s*\nSEO_TITLE:.*$/s, '').trim();
+        
+        console.log('📋 Extracted Metadata:');
+        console.log('  - SEO Title:', seoTitle);
+        console.log('  - SEO Desc:', seoDescription);
+      }
+    }
+
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('✅ AI REWRITE SUCCESS!');
     console.log('  - Original:', content.length, 'chars');
-    console.log('  - Rewritten:', rewrittenContent.length, 'chars');
-    console.log('  - Increase:', Math.round((rewrittenContent.length / content.length - 1) * 100) + '%');
+    console.log('  - Rewritten:', finalContent.length, 'chars');
+    console.log('  - Increase:', Math.round((finalContent.length / content.length - 1) * 100) + '%');
     console.log('  - Tokens:', tokensUsed);
     console.log('  - Cost:', cost);
     console.log('  - Provider:', actualProvider);
@@ -387,9 +453,11 @@ ${content}
 
     return NextResponse.json({
       success: true,
-      rewrittenContent,
+      rewrittenContent: finalContent,
+      seoTitle: seoTitle || title, // Fallback to original if not generated
+      seoDescription,
       originalLength: content.length,
-      rewrittenLength: rewrittenContent.length,
+      rewrittenLength: finalContent.length,
       tokensUsed,
       cost,
       provider: actualProvider,

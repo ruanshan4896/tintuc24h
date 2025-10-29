@@ -217,16 +217,17 @@ export async function POST(request: NextRequest) {
             const apiUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/admin/ai-rewrite`;
             console.log('📡 API URL:', apiUrl);
             
-            const rewriteRes = await fetch(apiUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                title,
-                content,
-                tone: 'professional',
-                provider: aiProvider,
-              }),
-            });
+                const rewriteRes = await fetch(apiUrl, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    title,
+                    content,
+                    tone: 'professional',
+                    provider: aiProvider,
+                    generateMetadata: true, // AI tạo title + description
+                  }),
+                });
 
             console.log('📥 Response status:', rewriteRes.status);
 
@@ -236,7 +237,21 @@ export async function POST(request: NextRequest) {
               
               if (rewriteData.rewrittenContent) {
                 finalContent = rewriteData.rewrittenContent;
-                finalDescription = finalContent.substring(0, 500).replace(/[#*]/g, '').trim();
+                
+                // Use AI-generated SEO metadata
+                if (rewriteData.seoTitle) {
+                  title = rewriteData.seoTitle;
+                  console.log(`📝 Using AI-generated SEO Title: ${title}`);
+                }
+                
+                if (rewriteData.seoDescription) {
+                  finalDescription = rewriteData.seoDescription;
+                  console.log(`📝 Using AI-generated SEO Description: ${finalDescription}`);
+                } else {
+                  // Fallback: Extract from content
+                  finalDescription = finalContent.substring(0, 155).replace(/[#*]/g, '').trim();
+                }
+                
                 console.log(`✅ AI Rewrite SUCCESS!`);
                 console.log(`  - Tokens: ${rewriteData.tokensUsed}`);
                 console.log(`  - Cost: ${rewriteData.cost}`);
