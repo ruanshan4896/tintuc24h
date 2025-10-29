@@ -438,7 +438,7 @@ TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
     let finalContent = rewrittenContent;
 
     if (generateMetadata) {
-      const metadataMatch = rewrittenContent.match(/---\s*\nSEO_TITLE:\s*(.+)\s*\nSEO_DESC:\s*(.+)\s*\nTAGS:\s*\[(.+)\]\s*$/s);
+      const metadataMatch = rewrittenContent.match(/---\s*\nSEO_TITLE:\s*(.+)\s*\nSEO_DESC:\s*(.+)\s*\nTAGS:\s*\[(.+)\]\s*$/);
       if (metadataMatch) {
         seoTitle = metadataMatch[1].trim();
         seoDescription = metadataMatch[2].trim();
@@ -451,7 +451,7 @@ TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
           .filter(tag => tag.length > 0 && tag.length < 50);
         
         // Remove metadata from content
-        finalContent = rewrittenContent.replace(/---\s*\nSEO_TITLE:.*$/s, '').trim();
+        finalContent = rewrittenContent.replace(/---\s*\nSEO_TITLE:[\s\S]*$/, '').trim();
         
         console.log('📋 Extracted Metadata:');
         console.log('  - SEO Title:', seoTitle);
