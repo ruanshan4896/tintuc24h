@@ -17,6 +17,8 @@ export default function RssManagementPage() {
   const [fetchingFeedId, setFetchingFeedId] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<RssImportResult | null>(null);
   const [scrapeFullContent, setScrapeFullContent] = useState(false);
+  const [aiRewrite, setAiRewrite] = useState(false);
+  const [aiProvider, setAiProvider] = useState<'google' | 'openai'>('google');
 
   const categories = ['Công nghệ', 'Thể thao', 'Sức khỏe', 'Ô tô', 'Giải trí'];
 
@@ -98,7 +100,9 @@ export default function RssManagementPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           feedId,
-          scrapeFullContent, 
+          scrapeFullContent,
+          aiRewrite,
+          aiProvider,
         }),
       });
 
@@ -240,11 +244,12 @@ export default function RssManagementPage() {
         </div>
       )}
 
-      {/* Scrape Options */}
+      {/* Scrape & AI Options */}
       <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-lg p-6 mb-8">
-        <div className="flex items-start gap-4">
-          <div className="flex-1">
-            <h3 className="font-bold text-purple-900 mb-2 flex items-center gap-2">
+        <div className="space-y-4">
+          {/* Web Scraping */}
+          <div>
+            <h3 className="font-bold text-purple-900 mb-3 flex items-center gap-2">
               🕷️ Web Scraping Options
             </h3>
             <div className="flex items-center gap-3">
@@ -256,20 +261,113 @@ export default function RssManagementPage() {
                 className="w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
               />
               <label htmlFor="scrapeFullContent" className="text-sm text-gray-700 cursor-pointer">
-                <strong>Lấy toàn bộ nội dung bài viết</strong> (Scrape full article content from original URL)
+                <strong>Lấy toàn bộ nội dung bài viết</strong> (Scrape full article content)
               </label>
             </div>
             <p className="text-xs text-gray-600 mt-2 ml-8">
-              ⚡ Khi bật: Tự động crawl full content từ URL gốc (chậm hơn nhưng nội dung đầy đủ)
-              <br />
-              💡 Khi tắt: Chỉ lấy excerpt từ RSS feed (nhanh nhưng nội dung ngắn)
+              ⚡ Crawl full content từ URL gốc (chậm hơn nhưng nội dung đầy đủ)
             </p>
-            {scrapeFullContent && (
-              <div className="ml-8 mt-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
-                ⚠️ <strong>Lưu ý:</strong> Web scraping sẽ chậm hơn (15-30s/bài). Chỉ lấy 10 bài/lần để tránh timeout.
+          </div>
+
+          {/* AI Rewrite */}
+          <div className="border-t pt-4">
+            <h3 className="font-bold text-purple-900 mb-3 flex items-center gap-2">
+              🤖 AI Rewrite Options <span className="text-xs font-normal text-orange-600 bg-orange-100 px-2 py-1 rounded">NEW</span>
+            </h3>
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="aiRewrite"
+                checked={aiRewrite}
+                onChange={(e) => setAiRewrite(e.target.checked)}
+                className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <label htmlFor="aiRewrite" className="text-sm text-gray-700 cursor-pointer">
+                <strong>Viết lại nội dung bằng AI</strong> (AI-powered content rewriting)
+              </label>
+            </div>
+            
+            {/* AI Provider Selection */}
+            {aiRewrite && (
+              <div className="ml-8 mt-3 space-y-3">
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 mb-1 block">Chọn AI Provider:</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="aiProvider"
+                        value="google"
+                        checked={aiProvider === 'google'}
+                        onChange={(e) => setAiProvider(e.target.value as 'google' | 'openai')}
+                        className="w-4 h-4 text-green-600"
+                      />
+                      <span className="text-sm">
+                        <strong className="text-green-700">Google AI (Gemini)</strong>
+                        <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">🆓 MIỄN PHÍ</span>
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="aiProvider"
+                        value="openai"
+                        checked={aiProvider === 'openai'}
+                        onChange={(e) => setAiProvider(e.target.value as 'google' | 'openai')}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <span className="text-sm">
+                        <strong className="text-blue-700">OpenAI (GPT-4)</strong>
+                        <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">💰 Trả phí</span>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Provider-specific info */}
+                {aiProvider === 'google' ? (
+                  <div className="px-3 py-2 bg-green-50 border border-green-200 rounded text-xs text-green-800">
+                    <strong>✅ Google AI Studio (Gemini 1.5 Flash):</strong>
+                    <ul className="list-disc list-inside mt-1 space-y-1">
+                      <li><strong>HOÀN TOÀN MIỄN PHÍ</strong> - Không cần credit card!</li>
+                      <li>60 requests/phút, 1,500 requests/ngày</li>
+                      <li>Chất lượng tốt, tiếng Việt xuất sắc</li>
+                      <li>Cần API key từ: <a href="https://aistudio.google.com/app/apikey" target="_blank" className="underline font-semibold">aistudio.google.com</a></li>
+                    </ul>
+                  </div>
+                ) : (
+                  <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+                    <strong>💰 OpenAI (GPT-4o-mini):</strong>
+                    <ul className="list-disc list-inside mt-1 space-y-1">
+                      <li>Trả phí: ~$0.001-0.005/bài</li>
+                      <li>Cần credit card để sử dụng</li>
+                      <li>Chất lượng cao, đa dạng</li>
+                      <li>API key từ: <a href="https://platform.openai.com/api-keys" target="_blank" className="underline font-semibold">platform.openai.com</a></li>
+                    </ul>
+                  </div>
+                )}
+
+                <div className="px-3 py-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+                  <strong>⚠️ Lưu ý:</strong>
+                  <ul className="list-disc list-inside mt-1 space-y-1">
+                    <li>AI rewrite sẽ chậm hơn (10-30s/bài)</li>
+                    <li>Luôn review nội dung trước khi publish</li>
+                    <li>Kết hợp với Web Scraping để có nội dung đầy đủ</li>
+                  </ul>
+                </div>
               </div>
             )}
           </div>
+
+          {/* Combined Warning */}
+          {(scrapeFullContent || aiRewrite) && (
+            <div className="px-3 py-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+              ⏱️ <strong>Thời gian ước tính:</strong>
+              {scrapeFullContent && aiRewrite && ' ~45-60s/bài (Scraping + AI Rewrite)'}
+              {scrapeFullContent && !aiRewrite && ' ~15-30s/bài (Scraping only)'}
+              {!scrapeFullContent && aiRewrite && ' ~10-30s/bài (AI Rewrite only)'}
+            </div>
+          )}
         </div>
       </div>
 

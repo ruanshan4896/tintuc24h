@@ -69,7 +69,15 @@ function generateSlug(title: string): string {
 // POST - Fetch and import RSS feed
 export async function POST(request: NextRequest) {
   try {
-    const { feedId, scrapeFullContent = false } = await request.json();
+    const { feedId, scrapeFullContent = false, aiRewrite = false, aiProvider = 'google' } = await request.json();
+
+    console.log('═══════════════════════════════════════════════');
+    console.log('📡 RSS FETCH STARTED');
+    console.log('═══════════════════════════════════════════════');
+    console.log('Feed ID:', feedId);
+    console.log('Scrape Full Content:', scrapeFullContent);
+    console.log('AI Rewrite:', aiRewrite);
+    console.log('AI Provider:', aiProvider);
 
     if (!feedId) {
       return NextResponse.json(
@@ -77,8 +85,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    console.log('Fetching RSS feed:', { feedId, scrapeFullContent });
 
     // Get feed details
     const { data: feed, error: feedError } = await supabaseAdmin
@@ -147,7 +153,8 @@ export async function POST(request: NextRequest) {
         let description = item.contentSnippet || item.summary || '';
         let content = htmlToMarkdown(item.content || item['content:encoded'] || item.summary || '');
         let imageUrl = extractImageUrl(item.content || '', item.enclosure);
-        let author = feed.name;
+        // Fixed author for all articles on the website
+        const author = 'Ctrl Z';
 
         // Scrape full content if enabled
         if (scrapeFullContent && itemUrl) {
@@ -172,10 +179,7 @@ export async function POST(request: NextRequest) {
                 description = scrapedArticle.excerpt;
               }
               
-              // Use author if available
-              if (scrapedArticle.author) {
-                author = `${scrapedArticle.author} (${feed.name})`;
-              }
+              // Author is fixed as "Ctrl Z" - no override from scraped content
               
               // Try to get better image
               if (!imageUrl) {
@@ -193,14 +197,81 @@ export async function POST(request: NextRequest) {
 
         const slug = generateSlug(title);
 
+        // AI Rewrite if enabled
+        let finalContent = content;
+        let finalDescription = description.substring(0, 500);
+        
+        console.log('🔍 Checking AI Rewrite conditions:');
+        console.log('  - aiRewrite flag:', aiRewrite);
+        console.log('  - content.length:', content.length);
+        console.log('  - Should rewrite?', aiRewrite && content.length > 200);
+        
+        if (aiRewrite && content.length > 200) {
+          try {
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log(`🤖 AI REWRITE: ${title.substring(0, 50)}...`);
+            console.log(`📊 Content length: ${content.length} chars`);
+            console.log(`🎯 Provider: ${aiProvider}`);
+            console.log('🚀 Calling AI Rewrite API...');
+            
+            const apiUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/admin/ai-rewrite`;
+            console.log('📡 API URL:', apiUrl);
+            
+            const rewriteRes = await fetch(apiUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title,
+                content,
+                tone: 'professional',
+                provider: aiProvider,
+              }),
+            });
+
+            console.log('📥 Response status:', rewriteRes.status);
+
+            if (rewriteRes.ok) {
+              const rewriteData = await rewriteRes.json();
+              console.log('📦 Response data:', rewriteData);
+              
+              if (rewriteData.rewrittenContent) {
+                finalContent = rewriteData.rewrittenContent;
+                finalDescription = finalContent.substring(0, 500).replace(/[#*]/g, '').trim();
+                console.log(`✅ AI Rewrite SUCCESS!`);
+                console.log(`  - Tokens: ${rewriteData.tokensUsed}`);
+                console.log(`  - Cost: ${rewriteData.cost}`);
+                console.log(`  - Original: ${content.length} chars`);
+                console.log(`  - Rewritten: ${finalContent.length} chars`);
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+              } else {
+                console.warn('⚠️ No rewritten content in response');
+              }
+            } else {
+              const errorText = await rewriteRes.text();
+              console.error('❌ AI Rewrite HTTP error:', rewriteRes.status);
+              console.error('Error response:', errorText);
+              console.warn('⚠️ AI Rewrite failed, using original content');
+            }
+          } catch (aiError: any) {
+            console.error('❌ AI Rewrite exception:', aiError);
+            console.error('Error details:', {
+              message: aiError.message,
+              stack: aiError.stack,
+            });
+            console.warn('⚠️ Using original content due to error');
+          }
+        } else {
+          console.log('⏭️ Skipping AI Rewrite (disabled or content too short)');
+        }
+
         // Create article
         const { data: article, error: articleError } = await supabaseAdmin
           .from('articles')
           .insert({
             title,
             slug,
-            description: description.substring(0, 500),
-            content,
+            description: finalDescription,
+            content: finalContent,
             image_url: imageUrl,
             category: feed.category,
             author,
