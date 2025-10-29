@@ -77,8 +77,8 @@ export default function Header() {
                 placeholder="Tìm kiếm..."
                 className="w-48 px-3 py-1.5 pr-8 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button type="submit" className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-600 hover:text-blue-600 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Tìm kiếm">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </button>
@@ -88,8 +88,8 @@ export default function Header() {
           {/* Mobile menu button */}
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="md:hidden text-gray-700 hover:text-blue-600 transition"
-            aria-label="Open menu"
+            className="md:hidden text-gray-700 hover:text-blue-600 transition p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
+            aria-label="Mở menu"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -118,8 +118,8 @@ export default function Header() {
           <span className="text-xl font-bold text-blue-600">📰 Menu</span>
           <button
             onClick={() => setMobileMenuOpen(false)}
-            className="text-gray-500 hover:text-gray-700 transition"
-            aria-label="Close menu"
+            className="text-gray-700 hover:text-gray-900 transition p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
+            aria-label="Đóng menu"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -190,7 +190,8 @@ export default function Header() {
                 />
                 <button
                   type="submit"
-                  className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 hover:text-blue-600 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                  aria-label="Tìm kiếm"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

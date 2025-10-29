@@ -84,8 +84,8 @@ export default function CategorySlider({ category, articles, categorySlug, icon 
         {canScrollLeft && (
           <button
             onClick={() => scroll('left')}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            aria-label="Scroll left"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-3 min-w-[48px] min-h-[48px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            aria-label="Cuộn sang trái"
           >
             <ChevronLeft className="w-6 h-6 text-gray-700" />
           </button>
@@ -94,8 +94,8 @@ export default function CategorySlider({ category, articles, categorySlug, icon 
         {canScrollRight && (
           <button
             onClick={() => scroll('right')}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            aria-label="Scroll right"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-3 min-w-[48px] min-h-[48px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            aria-label="Cuộn sang phải"
           >
             <ChevronRight className="w-6 h-6 text-gray-700" />
           </button>
