@@ -26,6 +26,12 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
   return {
     title: `${categoryName} - TinTức`,
     description: `Tất cả bài viết về ${categoryName}`,
+    alternates: {
+      canonical: `/category/${category}`,
+    },
+    openGraph: {
+      url: `/category/${category}`,
+    },
   };
 }
 

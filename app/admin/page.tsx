@@ -12,11 +12,18 @@ export default function AdminPage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all');
+  const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
   const { user, signOut } = useAuth();
 
   useEffect(() => {
     loadArticles();
   }, []);
+
+  // Clear selection when filter changes
+  useEffect(() => {
+    setSelectedArticles(new Set());
+  }, [filter]);
 
   async function loadArticles() {
     setLoading(true);
@@ -65,6 +72,89 @@ export default function AdminPage() {
     return true;
   });
 
+  // Bulk selection handlers
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      const allIds = new Set(filteredArticles.map(a => a.id));
+      setSelectedArticles(allIds);
+    } else {
+      setSelectedArticles(new Set());
+    }
+  };
+
+  const handleSelectArticle = (id: string) => {
+    const newSelected = new Set(selectedArticles);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedArticles(newSelected);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedArticles.size === 0) {
+      alert('Vui lòng chọn ít nhất một bài viết để xóa');
+      return;
+    }
+
+    const confirmMsg = `Bạn có chắc muốn xóa ${selectedArticles.size} bài viết đã chọn?\n\nHành động này không thể hoàn tác!`;
+    if (!confirm(confirmMsg)) return;
+
+    setIsDeleting(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+      // Delete articles one by one (could be optimized with bulk API)
+      for (const id of selectedArticles) {
+        try {
+          const response = await fetch(`/api/admin/articles?id=${id}`, {
+            method: 'DELETE',
+          });
+
+          if (response.ok) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (error) {
+          console.error(`Failed to delete article ${id}:`, error);
+          failCount++;
+        }
+      }
+
+      // Revalidate sitemap
+      try {
+        await fetch('/api/revalidate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: '/sitemap.xml' }),
+        });
+      } catch (revalError) {
+        console.warn('Could not revalidate sitemap:', revalError);
+      }
+
+      // Show result
+      if (failCount === 0) {
+        alert(`✅ Đã xóa thành công ${successCount} bài viết!`);
+      } else {
+        alert(`⚠️ Kết quả:\n- Thành công: ${successCount}\n- Thất bại: ${failCount}`);
+      }
+
+      // Clear selection and reload
+      setSelectedArticles(new Set());
+      loadArticles();
+    } catch (error) {
+      console.error('Bulk delete error:', error);
+      alert('❌ Có lỗi xảy ra khi xóa bài viết!');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const isAllSelected = filteredArticles.length > 0 && selectedArticles.size === filteredArticles.length;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Admin Header */}
@@ -98,46 +188,79 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-4xl font-bold text-gray-900">Quản lý bài viết</h1>
-            <Link
-              href="/admin/new"
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
-            >
-              + Thêm bài viết mới
-            </Link>
+            <div className="flex gap-3">
+              <Link
+                href="/admin/rss"
+                className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-semibold"
+              >
+                📡 RSS Feeds
+              </Link>
+              <Link
+                href="/admin/new"
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
+              >
+                + Thêm bài viết mới
+              </Link>
+            </div>
           </div>
 
-        {/* Filter */}
-        <div className="mb-6 flex gap-3">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-lg transition ${
-              filter === 'all'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            Tất cả ({articles.length})
-          </button>
-          <button
-            onClick={() => setFilter('published')}
-            className={`px-4 py-2 rounded-lg transition ${
-              filter === 'published'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            Đã xuất bản ({articles.filter((a) => a.published).length})
-          </button>
-          <button
-            onClick={() => setFilter('draft')}
-            className={`px-4 py-2 rounded-lg transition ${
-              filter === 'draft'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            Bản nháp ({articles.filter((a) => !a.published).length})
-          </button>
+        {/* Filter & Bulk Actions */}
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <div className="flex gap-3">
+            <button
+              onClick={() => setFilter('all')}
+              className={`px-4 py-2 rounded-lg transition ${
+                filter === 'all'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Tất cả ({articles.length})
+            </button>
+            <button
+              onClick={() => setFilter('published')}
+              className={`px-4 py-2 rounded-lg transition ${
+                filter === 'published'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Đã xuất bản ({articles.filter((a) => a.published).length})
+            </button>
+            <button
+              onClick={() => setFilter('draft')}
+              className={`px-4 py-2 rounded-lg transition ${
+                filter === 'draft'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Bản nháp ({articles.filter((a) => !a.published).length})
+            </button>
+          </div>
+
+          {/* Bulk Delete Button */}
+          {selectedArticles.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              disabled={isDeleting}
+              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isDeleting ? (
+                <>
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Đang xóa...
+                </>
+              ) : (
+                <>
+                  🗑️ Xóa {selectedArticles.size} bài viết
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -149,6 +272,15 @@ export default function AdminPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3 w-12">
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={handleSelectAll}
+                      className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                      title="Chọn tất cả"
+                    />
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Tiêu đề
                   </th>
@@ -171,7 +303,16 @@ export default function AdminPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredArticles.map((article) => (
-                  <tr key={article.id} className="hover:bg-gray-50">
+                  <tr key={article.id} className={`hover:bg-gray-50 ${selectedArticles.has(article.id) ? 'bg-blue-50' : ''}`}>
+                    <td className="px-6 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedArticles.has(article.id)}
+                        onChange={() => handleSelectArticle(article.id)}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                        title="Chọn bài viết này"
+                      />
+                    </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900">
                         {article.title}

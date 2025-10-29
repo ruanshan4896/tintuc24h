@@ -20,10 +20,17 @@ export async function generateMetadata({ params }: TagPageProps): Promise<Metada
   try {
     const resolvedParams = await params;
     const tag = decodeURIComponent(resolvedParams.tag);
+    const encodedTag = encodeURIComponent(tag);
     
     return {
       title: `Tag: ${tag} - TinTức`,
       description: `Tất cả bài viết được gắn tag "${tag}"`,
+      alternates: {
+        canonical: `/tag/${encodedTag}`,
+      },
+      openGraph: {
+        url: `/tag/${encodedTag}`,
+      },
     };
   } catch (error) {
     return {

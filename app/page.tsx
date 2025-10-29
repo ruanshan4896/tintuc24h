@@ -4,8 +4,17 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { CATEGORIES } from '@/lib/constants';
 import { Newspaper, TrendingUp } from 'lucide-react';
+import type { Metadata } from 'next';
 
 export const revalidate = 60; // Revalidate every 60 seconds
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: '/',
+  },
+};
 
 // Icon mapping cho từng category
 const categoryIcons: Record<string, string> = {

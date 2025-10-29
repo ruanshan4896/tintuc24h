@@ -79,9 +79,6 @@ export const metadata: Metadata = {
   verification: {
     google: 'Smfp6CDotxjXnPeit-7Kw41bOvV1McfSzgqwTZDzq3o',
   },
-  alternates: {
-    canonical: '/',
-  },
   category: 'news',
 };
 

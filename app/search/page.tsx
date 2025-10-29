@@ -16,10 +16,18 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
   try {
     const params = await searchParams;
     const query = params.q || '';
+    const canonicalUrl = query ? `/search?q=${encodeURIComponent(query)}` : '/search';
     
     return {
       title: query ? `Tìm kiếm: ${query} - TinTức` : 'Tìm kiếm - TinTức',
       description: query ? `Kết quả tìm kiếm cho "${query}"` : 'Tìm kiếm bài viết',
+      alternates: {
+        canonical: canonicalUrl,
+      },
+      robots: {
+        index: false, // Don't index search result pages
+        follow: true,
+      },
     };
   } catch (error) {
     return {

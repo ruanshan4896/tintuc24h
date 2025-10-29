@@ -47,6 +47,9 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       description: article.description,
       keywords: article.tags.join(', '),
       authors: [{ name: article.author }],
+      alternates: {
+        canonical: `/articles/${slug}`,
+      },
       openGraph: {
         title: article.title,
         description: article.description,
@@ -54,6 +57,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
         publishedTime: article.created_at,
         modifiedTime: article.updated_at,
         authors: [article.author],
+        url: `/articles/${slug}`,
         images: article.image_url ? [
           {
             url: article.image_url,
