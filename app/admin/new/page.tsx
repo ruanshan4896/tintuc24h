@@ -22,6 +22,18 @@ export default function NewArticlePage() {
       const result = await response.json();
 
       if (response.ok && result.data) {
+        // Revalidate sitemap after creating article
+        try {
+          await fetch('/api/revalidate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: '/sitemap.xml' }),
+          });
+          console.log('Sitemap revalidated');
+        } catch (revalError) {
+          console.warn('Could not revalidate sitemap:', revalError);
+        }
+        
         alert('Đã tạo bài viết thành công!');
         router.push('/admin');
         router.refresh();

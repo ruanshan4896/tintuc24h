@@ -35,6 +35,18 @@ export default function AdminPage() {
         const result = await response.json();
 
         if (response.ok && result.success) {
+          // Revalidate sitemap after deleting article
+          try {
+            await fetch('/api/revalidate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: '/sitemap.xml' }),
+            });
+            console.log('Sitemap revalidated');
+          } catch (revalError) {
+            console.warn('Could not revalidate sitemap:', revalError);
+          }
+          
           alert('Đã xóa bài viết thành công!');
           loadArticles();
         } else {
