@@ -234,9 +234,12 @@ ${content}
 
 **CẤU TRÚC BÀI VIẾT (THAM KHẢO):**
 
+❌ **KHÔNG được tạo abstract/summary in đậm ở đầu bài!**
+✅ **Bắt đầu TRỰC TIẾP với ## Heading hoặc đoạn văn thường**
+
 ## [Heading 1 - Chứa keyword chính]
 
-[Đoạn mở đầu hấp dẫn, hook người đọc, có keyword chính trong 50 từ đầu]
+[Đoạn mở đầu: Câu hook → Context → Tại sao quan trọng. Viết như đoạn văn bình thường, KHÔNG in đậm toàn bộ đoạn]
 
 ## [Heading 2 - Sub-topic hoặc benefit]
 

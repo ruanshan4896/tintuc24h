@@ -4,6 +4,7 @@ import Parser from 'rss-parser';
 import TurndownService from 'turndown';
 import type { RssImportResult } from '@/lib/types/rss';
 import { scrapeFullArticle, extractMainImage } from '@/lib/utils/scraper';
+import { searchUnsplashImages, extractImageKeywords } from '@/lib/utils/unsplash';
 
 const parser = new Parser({
   timeout: 10000,
@@ -277,6 +278,35 @@ export async function POST(request: NextRequest) {
           }
         } else {
           console.log('⏭️ Skipping AI Rewrite (disabled or content too short)');
+        }
+
+        // Search and insert Unsplash images
+        console.log('🖼️ Searching for images from Unsplash...');
+        const imageKeywords = extractImageKeywords(title);
+        const unsplashImages = await searchUnsplashImages(imageKeywords, 2);
+
+        if (unsplashImages && unsplashImages.length > 0) {
+          // Use first image as featured image (if no image from RSS)
+          if (!imageUrl) {
+            imageUrl = unsplashImages[0].url;
+            console.log(`✅ Using Unsplash image as featured: ${imageUrl}`);
+          }
+
+          // Insert first image after first heading (## ) or at the beginning
+          const firstHeadingMatch = finalContent.match(/^##\s.+$/m);
+          if (firstHeadingMatch) {
+            const insertPosition = firstHeadingMatch.index! + firstHeadingMatch[0].length;
+            const imageMarkdown = `\n\n![${unsplashImages[0].alt}](${unsplashImages[0].url})\n*${unsplashImages[0].credit}*\n`;
+            finalContent = finalContent.slice(0, insertPosition) + imageMarkdown + finalContent.slice(insertPosition);
+            console.log(`✅ Inserted 1 Unsplash image into content`);
+          } else {
+            // Insert at beginning if no heading found
+            const imageMarkdown = `![${unsplashImages[0].alt}](${unsplashImages[0].url})\n*${unsplashImages[0].credit}*\n\n`;
+            finalContent = imageMarkdown + finalContent;
+            console.log(`✅ Inserted 1 Unsplash image at beginning`);
+          }
+        } else {
+          console.warn('⚠️ No images found from Unsplash');
         }
 
         // Create article
