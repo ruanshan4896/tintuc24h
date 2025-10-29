@@ -94,9 +94,20 @@ export default function RootLayout({
     <html lang="vi" suppressHydrationWarning className={inter.variable}>
       <head>
         {/* Preconnect to external domains */}
+        <link rel="preconnect" href="https://cdn.24h.com.vn" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://cdn.24h.com.vn" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        
+        {/* Preload critical resources */}
+        <link
+          rel="preload"
+          href="/_next/static/media/1bffadaabf893a1e.7cd81963.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
         
         {/* Favicon optimized */}
         <link rel="icon" href="/favicon.ico" sizes="any" />

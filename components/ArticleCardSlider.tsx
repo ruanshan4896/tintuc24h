@@ -24,7 +24,7 @@ export default function ArticleCardSlider({ article, priority = false }: Article
               className="object-cover group-hover:scale-110 transition-transform duration-500"
               sizes="(max-width: 768px) 300px, 350px"
               loading={priority ? 'eager' : 'lazy'}
-              quality={85}
+              quality={75}
               placeholder="blur"
               blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQ3NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiLz4="
             />
