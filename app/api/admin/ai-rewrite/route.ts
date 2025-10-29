@@ -10,6 +10,24 @@ const openai = process.env.OPENAI_API_KEY ? new OpenAI({
 // Initialize Google AI (optional)
 const googleAI = process.env.GOOGLE_AI_API_KEY ? new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY) : null;
 
+// Clean up markdown output from AI (remove code fence wrappers)
+function cleanMarkdownOutput(content: string): string {
+  let cleaned = content.trim();
+  
+  // Remove ```markdown wrapper at start and ``` at end
+  if (cleaned.startsWith('```markdown')) {
+    cleaned = cleaned.replace(/^```markdown\n?/, '');
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```\n?/, '');
+  }
+  
+  if (cleaned.endsWith('```')) {
+    cleaned = cleaned.replace(/\n?```$/, '');
+  }
+  
+  return cleaned.trim();
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { content, title, tone = 'professional', provider = 'google' } = await request.json();
@@ -335,6 +353,9 @@ ${content}
       console.log('❌ AI content too short:', rewrittenContent.length, 'chars');
       throw new Error('AI generated content is too short');
     }
+
+    // Clean up AI output: Remove markdown code fence wrappers
+    rewrittenContent = cleanMarkdownOutput(rewrittenContent);
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('✅ AI REWRITE SUCCESS!');
