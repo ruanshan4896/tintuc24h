@@ -1,5 +1,5 @@
 import { Readability } from '@mozilla/readability';
-import { JSDOM } from 'jsdom';
+import { parseHTML } from 'linkedom';
 import TurndownService from 'turndown';
 import * as cheerio from 'cheerio';
 
@@ -409,9 +409,8 @@ export async function scrapeFullArticle(url: string): Promise<ScrapedArticle | n
     
     console.log('⚠️ Custom extractor failed, falling back to Readability...');
 
-    // Method 2: Parse with JSDOM + Readability
-    const dom = new JSDOM(html, { url });
-    const document = dom.window.document;
+    // Method 2: Parse with linkedom + Readability
+    const { document } = parseHTML(html);
 
     // Use Readability to extract article
     const reader = new Readability(document, {
@@ -465,8 +464,7 @@ export async function extractMainImage(url: string, htmlContent?: string): Promi
       htmlContent = await response.text();
     }
 
-    const dom = new JSDOM(htmlContent, { url });
-    const document = dom.window.document;
+    const { document } = parseHTML(htmlContent);
 
     // Try Open Graph image first
     const ogImage = document.querySelector('meta[property="og:image"]');
