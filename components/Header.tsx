@@ -40,63 +40,65 @@ export default function Header() {
   }, [mobileMenuOpen]);
 
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-50 will-change-transform">
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <Link href="/" className="flex items-center">
-            <span className="text-2xl font-bold text-blue-600">📰 TinTức</span>
-          </Link>
+    <>
+      <header className="bg-white shadow-sm sticky top-0 z-40 will-change-transform">
+        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <Link href="/" className="flex items-center">
+              <span className="text-2xl font-bold text-blue-600">📰 TinTức</span>
+            </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
-            <Link href="/" className="text-gray-700 hover:text-blue-600 transition">
-              Trang chủ
-            </Link>
-            <Link href="/category/cong-nghe" className="text-gray-700 hover:text-blue-600 transition">
-              Công nghệ
-            </Link>
-            <Link href="/category/the-thao" className="text-gray-700 hover:text-blue-600 transition">
-              Thể thao
-            </Link>
-            <Link href="/category/suc-khoe" className="text-gray-700 hover:text-blue-600 transition">
-              Sức khỏe
-            </Link>
-            <Link href="/category/o-to" className="text-gray-700 hover:text-blue-600 transition">
-              Ô tô
-            </Link>
-            <Link href="/category/giai-tri" className="text-gray-700 hover:text-blue-600 transition">
-              Giải trí
-            </Link>
-            
-            {/* Search */}
-            <form onSubmit={handleSearch} className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm kiếm..."
-                className="w-48 px-3 py-1.5 pr-12 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <button type="submit" className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-600 hover:text-blue-600 p-2 min-w-[40px] min-h-[40px] flex items-center justify-center" aria-label="Tìm kiếm">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </button>
-            </form>
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-6">
+              <Link href="/" className="text-gray-700 hover:text-blue-600 transition">
+                Trang chủ
+              </Link>
+              <Link href="/category/cong-nghe" className="text-gray-700 hover:text-blue-600 transition">
+                Công nghệ
+              </Link>
+              <Link href="/category/the-thao" className="text-gray-700 hover:text-blue-600 transition">
+                Thể thao
+              </Link>
+              <Link href="/category/suc-khoe" className="text-gray-700 hover:text-blue-600 transition">
+                Sức khỏe
+              </Link>
+              <Link href="/category/o-to" className="text-gray-700 hover:text-blue-600 transition">
+                Ô tô
+              </Link>
+              <Link href="/category/giai-tri" className="text-gray-700 hover:text-blue-600 transition">
+                Giải trí
+              </Link>
+              
+              {/* Search */}
+              <form onSubmit={handleSearch} className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Tìm kiếm..."
+                  className="w-48 px-3 py-1.5 pr-12 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <button type="submit" className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-600 hover:text-blue-600 p-2 min-w-[40px] min-h-[40px] flex items-center justify-center" aria-label="Tìm kiếm">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </button>
+              </form>
+            </div>
+
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden text-gray-700 hover:text-blue-600 transition p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              aria-label="Mở menu"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
           </div>
-
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setMobileMenuOpen(true)}
-            className="md:hidden text-gray-700 hover:text-blue-600 transition p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
-            aria-label="Mở menu"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-        </div>
-      </nav>
+        </nav>
+      </header>
 
       {/* Mobile Sidebar Menu */}
       {/* Backdrop */}
@@ -208,7 +210,7 @@ export default function Header() {
           </div>
         </div>
       </div>
-    </header>
+    </>
   );
 }
 
