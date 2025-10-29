@@ -90,32 +90,84 @@ export async function searchUnsplashImages(
 }
 
 /**
- * Extract main keywords from title for image search
- * @param title - Article title
- * @returns Cleaned keywords for search
+ * Translate Vietnamese keywords to English using AI
+ * @param vietnameseKeywords - Keywords in Vietnamese
+ * @returns English keywords for Unsplash search
  */
-export function extractImageKeywords(title: string): string {
+async function translateToEnglish(vietnameseKeywords: string): Promise<string> {
+  const googleApiKey = process.env.GOOGLE_AI_API_KEY;
+  
+  if (!googleApiKey) {
+    console.warn('⚠️ No AI key, using Vietnamese keywords (may not find images)');
+    return vietnameseKeywords;
+  }
+
+  try {
+    const prompt = `Translate these Vietnamese keywords to English for image search. Return ONLY the English keywords, no explanation.
+
+Vietnamese: ${vietnameseKeywords}
+English:`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${googleApiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      console.warn('⚠️ AI translation failed, using original keywords');
+      return vietnameseKeywords;
+    }
+
+    const data = await response.json();
+    const englishKeywords = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || vietnameseKeywords;
+    
+    console.log(`🌐 Translated: "${vietnameseKeywords}" → "${englishKeywords}"`);
+    return englishKeywords;
+  } catch (error: any) {
+    console.error('❌ Translation error:', error.message);
+    return vietnameseKeywords;
+  }
+}
+
+/**
+ * Extract main keywords from title for image search
+ * @param title - Article title (Vietnamese)
+ * @returns English keywords for Unsplash search
+ */
+export async function extractImageKeywords(title: string): Promise<string> {
   // Remove common Vietnamese stop words and punctuation
   const stopWords = [
     'của', 'và', 'là', 'có', 'để', 'được', 'trong', 'tại', 'với', 'cho',
     'từ', 'về', 'theo', 'đã', 'sẽ', 'thì', 'này', 'đó', 'hay', 'hoặc',
-    'như', 'khi', 'nếu', 'vì', 'bởi', 'cùng', 'nhưng', 'mà', 'bằng', 'không'
+    'như', 'khi', 'nếu', 'vì', 'bởi', 'cùng', 'nhưng', 'mà', 'bằng', 'không',
+    'các', 'những', 'một', 'vào', 'ra', 'đến', 'lên', 'xuống', 'bị', 'làm'
   ];
 
-  let keywords = title
+  // Extract meaningful Vietnamese keywords first
+  let vietnameseKeywords = title
     .toLowerCase()
     .replace(/[?!.,;:'"]/g, '') // Remove punctuation
     .split(/\s+/)
     .filter(word => word.length > 2 && !stopWords.includes(word))
-    .slice(0, 5) // Take first 5 meaningful words
+    .slice(0, 6) // Take first 6 meaningful words
     .join(' ');
 
   // If too short, use original title
-  if (keywords.length < 10) {
-    keywords = title.replace(/[?!.,;:'"]/g, '');
+  if (vietnameseKeywords.length < 10) {
+    vietnameseKeywords = title.replace(/[?!.,;:'"]/g, '').substring(0, 100);
   }
 
-  console.log(`🔍 Image keywords: "${keywords}"`);
-  return keywords;
+  console.log(`🔍 Vietnamese keywords: "${vietnameseKeywords}"`);
+
+  // Translate to English for Unsplash search
+  const englishKeywords = await translateToEnglish(vietnameseKeywords);
+  
+  return englishKeywords;
 }
 
