@@ -289,7 +289,7 @@ export async function POST(request: NextRequest) {
 
         // Search and insert Unsplash images
         console.log('🖼️ Searching for images from Unsplash...');
-        const imageKeywords = extractImageKeywords(title);
+        const imageKeywords = await extractImageKeywords(title);
         const unsplashImages = await searchUnsplashImages(imageKeywords, 2);
 
         if (unsplashImages && unsplashImages.length > 0) {
