@@ -59,3 +59,46 @@ export async function getArticlesServer(published = true): Promise<Article[]> {
   return data as Article[];
 }
 
+export async function getArticlesByTagServer(tag: string, published = true): Promise<Article[]> {
+  console.log('getArticlesByTagServer - Searching for tag:', tag);
+  
+  const query = supabaseAdmin
+    .from('articles')
+    .select('*')
+    .contains('tags', [tag])
+    .order('created_at', { ascending: false });
+
+  if (published) {
+    query.eq('published', true);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching articles by tag:', error);
+    return [];
+  }
+
+  console.log('getArticlesByTagServer - Found:', data?.length || 0, 'articles');
+  return data as Article[];
+}
+
+export async function searchArticlesServer(searchTerm: string): Promise<Article[]> {
+  console.log('searchArticlesServer - Searching for:', searchTerm);
+  
+  const { data, error } = await supabaseAdmin
+    .from('articles')
+    .select('*')
+    .eq('published', true)
+    .or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%`)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error searching articles:', error);
+    return [];
+  }
+
+  console.log('searchArticlesServer - Found:', data?.length || 0, 'articles');
+  return data as Article[];
+}
+

@@ -2,12 +2,22 @@ import { getArticlesByCategory } from '@/lib/api/articles';
 import ArticleCard from '@/components/ArticleCard';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import Image from 'next/image';
 
 interface CategoryPageProps {
   params: Promise<{
     category: string;
   }>;
 }
+
+// Category background images
+const categoryBackgrounds: { [key: string]: string } = {
+  'cong-nghe': 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1920&q=80', // Technology
+  'the-thao': 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=1920&q=80', // Sports
+  'suc-khoe': 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1920&q=80', // Health
+  'o-to': 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1920&q=80', // Cars
+  'giai-tri': 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1920&q=80', // Entertainment
+};
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const { category } = await params;
@@ -34,19 +44,40 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   
   const categoryDisplayName = categoryMap[categorySlug] || categoryName;
   const articles = await getArticlesByCategory(categoryDisplayName, true);
+  const backgroundImage = categoryBackgrounds[categorySlug] || categoryBackgrounds['cong-nghe'];
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      {/* Header */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            {categoryDisplayName}
-          </h1>
-          <p className="text-xl text-blue-100">
-            {articles.length} bài viết
-          </p>
+      {/* Header with Background Image */}
+      <section className="relative h-[400px] md:h-[500px] overflow-hidden">
+        {/* Background Image */}
+        <Image
+          src={backgroundImage}
+          alt={categoryDisplayName}
+          fill
+          priority
+          quality={85}
+          className="object-cover"
+          sizes="100vw"
+        />
+        
+        {/* Overlay Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/70" />
+        
+        {/* Content */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 drop-shadow-2xl">
+              {categoryDisplayName}
+            </h1>
+            <p className="text-2xl md:text-3xl text-white/90 font-medium drop-shadow-lg">
+              {articles.length} bài viết
+            </p>
+          </div>
         </div>
+        
+        {/* Bottom Gradient Fade */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-gray-50 to-transparent" />
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

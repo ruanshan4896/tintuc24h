@@ -209,12 +209,13 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               <h3 className="text-lg font-semibold mb-3">Tags:</h3>
               <div className="flex flex-wrap gap-2">
                 {article.tags.map((tag) => (
-                  <span
+                  <Link
                     key={tag}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                    href={`/tag/${encodeURIComponent(tag)}`}
+                    className="px-4 py-2 bg-purple-50 text-purple-600 hover:bg-purple-100 rounded-lg transition font-medium"
                   >
                     #{tag}
-                  </span>
+                  </Link>
                 ))}
               </div>
             </div>
