@@ -69,8 +69,14 @@ function generateSlug(title: string): string {
 
 // POST - Fetch and import RSS feed
 export async function POST(request: NextRequest) {
+  let feedId: string | undefined;
+  
   try {
-    const { feedId, scrapeFullContent = false, aiRewrite = false, aiProvider = 'google' } = await request.json();
+    const body = await request.json();
+    feedId = body.feedId;
+    const scrapeFullContent = body.scrapeFullContent || false;
+    const aiRewrite = body.aiRewrite || false;
+    const aiProvider = body.aiProvider || 'google';
 
     console.log('═══════════════════════════════════════════════');
     console.log('📡 RSS FETCH STARTED');
