@@ -363,9 +363,21 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error('Error fetching RSS feed:', error);
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ ERROR FETCHING RSS FEED');
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('Error Type:', error.constructor?.name);
+    console.error('Error Message:', error.message);
+    console.error('Error Stack:', error.stack);
+    console.error('Feed ID:', feedId);
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
     return NextResponse.json(
-      { error: 'Failed to fetch RSS feed', details: error.message },
+      { 
+        error: 'Không thể fetch RSS feed', 
+        details: error.message,
+        type: error.constructor?.name,
+      },
       { status: 500 }
     );
   }
