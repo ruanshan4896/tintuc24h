@@ -268,19 +268,24 @@ ${content}
 ---
 
 ${generateMetadata ? `
-**QUAN TRỌNG - TẠO METADATA SEO:**
+**QUAN TRỌNG - TẠO METADATA SEO + TAGS:**
 
-Sau khi viết xong bài, thêm 2 dòng cuối cùng (bắt đầu với "---"):
+Sau khi viết xong bài, thêm 3 dòng cuối cùng (bắt đầu với "---"):
 
 \`\`\`
 ---
 SEO_TITLE: [Tiêu đề SEO mới 50-60 ký tự, KHÁC BẢN GỐC, có keyword]
 SEO_DESC: [Mô tả ngắn gọn 140-155 ký tự, tóm tắt nội dung chính, có CTA]
+TAGS: [tag1, tag2, tag3, tag4, tag5]
 \`\`\`
 
 **YÊU CẦU:**
 - SEO_TITLE: Viết LẠI hoàn toàn, KHÁC tiêu đề gốc, hấp dẫn, có số liệu nếu có
 - SEO_DESC: Ngắn gọn, súc tích, hook + benefit + CTA
+- TAGS: 3-7 tags, viết thường, ngắn gọn (1-3 từ), liên quan đến nội dung
+  - Format: [tag1, tag2, tag3] - dùng dấu phẩy ngăn cách
+  - Ví dụ: sức khỏe, ô nhiễm, hà nội, công nghệ, ai
+  - KHÔNG dùng hashtag (#)
 - Đặt ở CUỐI CÙNG của bài viết
 
 **VÍ DỤ:**
@@ -290,6 +295,7 @@ SEO_DESC: [Mô tả ngắn gọn 140-155 ký tự, tóm tắt nội dung chính,
 ---
 SEO_TITLE: Ô Nhiễm Hà Nội Vượt 215 AQI: Cách Bảo Vệ Sức Khỏe
 SEO_DESC: Chỉ số AQI Hà Nội vượt mức an toàn 2,5 lần. Tìm hiểu tác động và biện pháp phòng tránh hiệu quả cho gia đình bạn.
+TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
 \`\`\`
 ` : ''}`;
 
@@ -428,19 +434,29 @@ SEO_DESC: Chỉ số AQI Hà Nội vượt mức an toàn 2,5 lần. Tìm hiểu
     // Extract metadata if present
     let seoTitle = '';
     let seoDescription = '';
+    let tags: string[] = [];
     let finalContent = rewrittenContent;
 
     if (generateMetadata) {
-      const metadataMatch = rewrittenContent.match(/---\s*\nSEO_TITLE:\s*(.+)\s*\nSEO_DESC:\s*(.+)\s*$/s);
+      const metadataMatch = rewrittenContent.match(/---\s*\nSEO_TITLE:\s*(.+)\s*\nSEO_DESC:\s*(.+)\s*\nTAGS:\s*\[(.+)\]\s*$/s);
       if (metadataMatch) {
         seoTitle = metadataMatch[1].trim();
         seoDescription = metadataMatch[2].trim();
+        const tagsString = metadataMatch[3].trim();
+        
+        // Parse tags
+        tags = tagsString
+          .split(',')
+          .map(tag => tag.trim().toLowerCase())
+          .filter(tag => tag.length > 0 && tag.length < 50);
+        
         // Remove metadata from content
         finalContent = rewrittenContent.replace(/---\s*\nSEO_TITLE:.*$/s, '').trim();
         
         console.log('📋 Extracted Metadata:');
         console.log('  - SEO Title:', seoTitle);
         console.log('  - SEO Desc:', seoDescription);
+        console.log('  - Tags:', tags);
       }
     }
 
@@ -459,6 +475,7 @@ SEO_DESC: Chỉ số AQI Hà Nội vượt mức an toàn 2,5 lần. Tìm hiểu
       rewrittenContent: finalContent,
       seoTitle: seoTitle || title, // Fallback to original if not generated
       seoDescription,
+      tags,
       originalLength: content.length,
       rewrittenLength: finalContent.length,
       tokensUsed,

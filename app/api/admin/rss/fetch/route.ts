@@ -201,6 +201,7 @@ export async function POST(request: NextRequest) {
         // AI Rewrite if enabled
         let finalContent = content;
         let finalDescription = description.substring(0, 500);
+        let aiTags: string[] = [];
         
         console.log('🔍 Checking AI Rewrite conditions:');
         console.log('  - aiRewrite flag:', aiRewrite);
@@ -251,6 +252,12 @@ export async function POST(request: NextRequest) {
                 } else {
                   // Fallback: Extract from content
                   finalDescription = finalContent.substring(0, 155).replace(/[#*]/g, '').trim();
+                }
+                
+                // Use AI-generated tags
+                if (rewriteData.tags && Array.isArray(rewriteData.tags) && rewriteData.tags.length > 0) {
+                  aiTags = rewriteData.tags;
+                  console.log(`🏷️ Using AI-generated tags:`, aiTags);
                 }
                 
                 console.log(`✅ AI Rewrite SUCCESS!`);
@@ -321,7 +328,7 @@ export async function POST(request: NextRequest) {
             category: feed.category,
             author,
             published: false, // Set to false for manual review
-            tags: [],
+            tags: aiTags.length > 0 ? aiTags : [],
           })
           .select()
           .single();
