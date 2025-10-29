@@ -76,9 +76,38 @@ export async function POST(request: NextRequest) {
       engaging: 'Giọng văn hấp dẫn, thu hút, có nhiều câu hỏi và ví dụ.',
     };
 
-    const prompt = `Bạn là một SEO Content Specialist và biên tập viên tin tức chuyên nghiệp.
+      const prompt = `Bạn là một SEO Content Specialist và biên tập viên tin tức chuyên nghiệp.
 
 Nhiệm vụ: Viết MỘT BÀI BÁO HOÀN TOÀN MỚI dựa trên thông tin từ bài gốc. KHÔNG viết lại từng câu - hãy VIẾT LẠI TOÀN BỘ như bạn đang tự viết một bài báo mới.
+
+## ⚠️ QUY TẮC ĐẦU RA (OUTPUT RULES) - BẮT BUỘC:
+
+**CRITICAL:** Trả về TRỰC TIẾP markdown content, BẮT ĐẦU NGAY với ## Heading hoặc đoạn văn đầu tiên.
+
+❌ **TUYỆT ĐỐI KHÔNG được thêm:**
+- \`\`\`markdown wrapper
+- \`\`\` code fence
+- Bất kỳ meta text nào như "Đây là bài viết đã viết lại..."
+- Tiêu đề bài (title) ở đầu
+
+✅ **Chỉ trả về:**
+- Markdown content thuần túy
+- Bắt đầu với ## Heading hoặc đoạn văn
+- Kết thúc với đoạn cuối cùng (KHÔNG có \`\`\`)
+
+**VÍ DỤ OUTPUT ĐÚNG:**
+\`\`\`
+## Tiêu Đề Chính: Câu Chuyện Hấp Dẫn
+
+Đoạn mở đầu với câu hook thu hút người đọc...
+
+- **Điểm 1**: Nội dung
+- **Điểm 2**: Nội dung
+
+## Tiêu Đề Phụ
+
+Nội dung tiếp theo...
+\`\`\`
 
 ## YÊU CẦU QUAN TRỌNG NHẤT - VIẾT KHÁC BIỆT 100%:
 
@@ -185,14 +214,11 @@ ${content}
 
 ---
 
-**OUTPUT FORMAT:**
+**CẤU TRÚC BÀI VIẾT (THAM KHẢO):**
 
-\`\`\`markdown
 ## [Heading 1 - Chứa keyword chính]
 
 [Đoạn mở đầu hấp dẫn, hook người đọc, có keyword chính trong 50 từ đầu]
-
-[Đoạn 2: Context, tại sao điều này quan trọng]
 
 ## [Heading 2 - Sub-topic hoặc benefit]
 
@@ -200,7 +226,6 @@ ${content}
 
 - **Point 1**: [Chi tiết]
 - **Point 2**: [Chi tiết]
-- **Point 3**: [Chi tiết]
 
 ### [Sub-heading nếu cần]
 
@@ -208,23 +233,16 @@ ${content}
 
 ## [Heading 3 - Giải pháp/Cách làm]
 
-[Hướng dẫn cụ thể, tips, best practices]
-
 1. **Bước 1**: [Mô tả]
 2. **Bước 2**: [Mô tả]
-3. **Bước 3**: [Mô tả]
 
 ## [Heading 4 - Kết luận/Tóm tắt]
 
 [Tóm tắt key points, takeaways, CTA tự nhiên]
-\`\`\`
 
-**QUY TẮC TUYỆT ĐỐI:**
-❌ KHÔNG thêm meta text như "Đây là bài viết đã viết lại..."
-❌ KHÔNG giải thích về quá trình viết lại
-❌ KHÔNG thêm tiêu đề bài (title) ở đầu - chỉ bắt đầu với ## Heading
-✅ CHỈ trả về nội dung Markdown đã tối ưu SEO
-✅ Bắt đầu NGAY với ## Heading đầu tiên hoặc đoạn introduction`;
+---
+
+**BẮT ĐẦU VIẾT BÀI NGAY - CHỈ TRẢ VỀ MARKDOWN (không có wrapper \`\`\`markdown, không giải thích):**`;
 
 
     // Call AI API based on provider
