@@ -35,18 +35,11 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
   poweredByHeader: false,
   compress: true,
-  // Enable SWC minification
-  swcMinify: true,
-  // Optimize CSS
-  optimizeFonts: true,
   // Strict mode for better performance
   reactStrictMode: true,
   // TypeScript config
   typescript: {
     ignoreBuildErrors: false,
-  },
-  eslint: {
-    ignoreDuringBuilds: false,
   },
 };
 
