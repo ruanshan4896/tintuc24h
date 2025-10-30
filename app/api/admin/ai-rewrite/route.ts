@@ -90,18 +90,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine which provider to use and select Google AI key with round-robin
+    // Determine which provider to use
     const actualProvider = provider === 'openai' && openai ? 'openai' : 'google';
-    let googleAI: GoogleGenerativeAI | null = null;
-    
-    if (actualProvider === 'google' && googleApiKeys.length > 0) {
-      // Use round-robin to rotate between keys
-      const selectedKey = googleApiKeys[currentKeyIndex % googleApiKeys.length];
-      const keyNumber = (currentKeyIndex % googleApiKeys.length) + 1;
-      console.log(`🔄 Using Google AI Key #${keyNumber} of ${googleApiKeys.length}`);
-      googleAI = new GoogleGenerativeAI(selectedKey);
-      currentKeyIndex++; // Rotate to next key for next request
-    }
 
     console.log('📊 Request Info:');
     console.log('  - Title:', title.substring(0, 50) + '...');
@@ -348,25 +338,33 @@ TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
     let tokensUsed = 0;
     let cost = '$0.0000';
 
-    if (actualProvider === 'google' && googleAI) {
+    if (actualProvider === 'google' && googleApiKeys.length > 0) {
       console.log('🟢 Using Google AI (Gemini)');
+      console.log(`📦 Available keys: ${googleApiKeys.length}`);
       
       // Only gemini-2.0-flash-lite works with v1beta API (Oct 2025)
-      const modelNames = [
-        'gemini-2.0-flash-lite',   // Only working model for free tier
-      ];
+      const modelName = 'gemini-2.0-flash-lite';
       
       let result;
       let duration = 0;
       let lastError;
+      let successfulKeyIndex = -1;
       
-      for (const modelName of modelNames) {
+      // Try each key until one succeeds
+      for (let keyAttempt = 0; keyAttempt < googleApiKeys.length; keyAttempt++) {
+        // Calculate which key to try (start from current position)
+        const keyIndex = (currentKeyIndex + keyAttempt) % googleApiKeys.length;
+        const keyNumber = keyIndex + 1;
+        const selectedKey = googleApiKeys[keyIndex];
+        
+        console.log(`🔑 Trying Key #${keyNumber} of ${googleApiKeys.length}...`);
+        
+        const tempGoogleAI = new GoogleGenerativeAI(selectedKey);
+        
         try {
-          console.log(`📝 Trying Model: ${modelName}`);
-          
           // Try with minimal config first
           console.log('⚙️  Trying with minimal config...');
-          let model = googleAI.getGenerativeModel({ 
+          let model = tempGoogleAI.getGenerativeModel({ 
             model: modelName,
           });
 
@@ -374,16 +372,28 @@ TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
           result = await model.generateContent(prompt);
           duration = Date.now() - startTime;
           
-          console.log(`✅ SUCCESS with model: ${modelName} (minimal config)`);
+          console.log(`✅ SUCCESS with Key #${keyNumber} (minimal config)`);
+          successfulKeyIndex = keyIndex;
           break; // Success! Exit loop
           
         } catch (minimalError: any) {
+          // Check if it's a quota error (429)
+          const isQuotaError = minimalError.message?.includes('429') || 
+                               minimalError.message?.includes('quota') ||
+                               minimalError.message?.includes('Too Many Requests');
+          
+          if (isQuotaError) {
+            console.log(`⚠️  Key #${keyNumber} quota exceeded, trying next key...`);
+            lastError = minimalError;
+            continue; // Try next key
+          }
+          
           console.log(`⚠️  Minimal config failed: ${minimalError.message}`);
           
-          // Try with full config as fallback
+          // Try with full config as fallback (for non-quota errors)
           try {
             console.log('⚙️  Trying with full config (temp=1.0, topP=0.95, topK=40)...');
-            const model = googleAI.getGenerativeModel({ 
+            const model = tempGoogleAI.getGenerativeModel({ 
               model: modelName,
               generationConfig: {
                 temperature: 1.0,
@@ -397,20 +407,43 @@ TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
             result = await model.generateContent(prompt);
             duration = Date.now() - startTime;
             
-            console.log(`✅ SUCCESS with model: ${modelName} (full config)`);
+            console.log(`✅ SUCCESS with Key #${keyNumber} (full config)`);
+            successfulKeyIndex = keyIndex;
             break; // Success! Exit loop
             
           } catch (fullError: any) {
+            // Check if it's a quota error
+            const isFullQuotaError = fullError.message?.includes('429') || 
+                                     fullError.message?.includes('quota') ||
+                                     fullError.message?.includes('Too Many Requests');
+            
+            if (isFullQuotaError) {
+              console.log(`⚠️  Key #${keyNumber} quota exceeded (full config), trying next key...`);
+              lastError = fullError;
+              continue; // Try next key
+            }
+            
             console.log(`❌ Full config also failed: ${fullError.message}`);
             lastError = fullError;
-            continue; // Try next model
+            continue; // Try next key for other errors too
           }
         }
       }
       
       if (!result) {
-        console.error('❌ All models failed!');
-        throw lastError || new Error('All Google AI models failed');
+        console.error('❌ All keys failed!');
+        // Check if all failures were quota errors
+        const isAllQuotaErrors = lastError?.message?.includes('quota') || 
+                                 lastError?.message?.includes('429');
+        if (isAllQuotaErrors) {
+          console.error('💡 TIP: All keys exceeded quota. Wait for reset or add more keys.');
+        }
+        throw lastError || new Error('All Google AI keys failed');
+      }
+      
+      // Update currentKeyIndex to the successful key + 1 for next request
+      if (successfulKeyIndex >= 0) {
+        currentKeyIndex = (successfulKeyIndex + 1) % googleApiKeys.length;
       }
       
       rewrittenContent = result.response.text() || '';
