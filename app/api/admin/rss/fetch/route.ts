@@ -54,15 +54,39 @@ function decodeHtmlEntities(text: string): string {
   return decoded;
 }
 
+// Helper function to get all available Google AI keys
+function getGoogleAIKeys(): string[] {
+  const keys: string[] = [];
+  let i = 1;
+  
+  // Check for numbered keys (GOOGLE_AI_API_KEY_1, GOOGLE_AI_API_KEY_2, ...)
+  while (true) {
+    const key = process.env[`GOOGLE_AI_API_KEY_${i}`];
+    if (key) {
+      keys.push(key);
+      i++;
+    } else {
+      break;
+    }
+  }
+  
+  // Fallback to single key if no numbered keys found
+  if (keys.length === 0 && process.env.GOOGLE_AI_API_KEY) {
+    keys.push(process.env.GOOGLE_AI_API_KEY);
+  }
+  
+  return keys;
+}
+
 // Helper function to generate meaningful image caption AND alt text using AI
 async function generateImageCaptionAndAlt(
   articleTitle: string
 ): Promise<{ caption: string; alt: string }> {
   try {
-    // Get first available Google AI key
-    let googleApiKey = process.env.GOOGLE_AI_API_KEY_1 || process.env.GOOGLE_AI_API_KEY;
+    // Get ALL available Google AI keys
+    const googleApiKeys = getGoogleAIKeys();
     
-    if (!googleApiKey) {
+    if (googleApiKeys.length === 0) {
       console.warn('⚠️ No Google AI key, using default caption & alt');
       // Fallback: Simple caption and alt based on title
       const mainTopic = articleTitle.split(':')[0].trim();
@@ -72,8 +96,7 @@ async function generateImageCaptionAndAlt(
       };
     }
 
-    const genAI = new GoogleGenerativeAI(googleApiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
+    console.log(`🔑 Caption Gen: ${googleApiKeys.length} keys available`);
 
     // Generate BOTH caption (for display) and alt text (for SEO/accessibility)
     const prompt = `Tạo chú thích (caption) và mô tả thay thế (alt text) cho hình ảnh minh họa trong bài viết tin tức.
@@ -103,8 +126,48 @@ ALT: Cristiano Ronaldo bóng đá
 
 Trả về NGAY theo format (KHÔNG giải thích):`;
 
-    const result = await model.generateContent(prompt);
-    const response = result.response.text().trim();
+    // Try each key until one succeeds
+    let result;
+    let response;
+    let lastError;
+    
+    for (let keyIndex = 0; keyIndex < googleApiKeys.length; keyIndex++) {
+      const selectedKey = googleApiKeys[keyIndex];
+      const keyNumber = keyIndex + 1;
+      
+      try {
+        console.log(`🔑 Trying Key #${keyNumber}/${googleApiKeys.length}...`);
+        
+        const genAI = new GoogleGenerativeAI(selectedKey);
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
+        
+        result = await model.generateContent(prompt);
+        response = result.response.text().trim();
+        
+        console.log(`✅ Success with Key #${keyNumber}`);
+        break; // Success! Exit loop
+        
+      } catch (error: any) {
+        // Check if it's a quota error (429)
+        const isQuotaError = error.message?.includes('429') || 
+                             error.message?.includes('quota') ||
+                             error.message?.includes('Too Many Requests');
+        
+        if (isQuotaError) {
+          console.log(`⚠️ Key #${keyNumber} quota exceeded, trying next key...`);
+          lastError = error;
+          continue; // Try next key
+        } else {
+          // Other errors, throw immediately
+          throw error;
+        }
+      }
+    }
+    
+    // If all keys failed with quota error
+    if (!response) {
+      throw lastError || new Error('All Google AI keys quota exceeded');
+    }
     
     // Parse response
     const captionMatch = response.match(/CAPTION:\s*(.+)/i);
