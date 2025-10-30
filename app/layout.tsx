@@ -2,9 +2,16 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import dynamic from 'next/dynamic';
+// Analytics only for production to improve dev performance
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+
+// Lazy load Footer to reduce initial bundle
+const Footer = dynamic(() => import('@/components/Footer'), {
+  loading: () => <div className="h-64 bg-gray-900" />,
+  ssr: true, // Keep SSR for SEO
+});
 
 // Optimize font loading
 const inter = Inter({ 
@@ -110,6 +117,17 @@ export default function RootLayout({
         {/* Favicon optimized */}
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/favicon.ico" />
+        
+        {/* PWA Service Worker registration */}
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
+              window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
+              });
+            }
+          `
+        }} />
       </head>
       <body className={inter.className} suppressHydrationWarning>
         <div className="flex flex-col min-h-screen">
@@ -119,8 +137,13 @@ export default function RootLayout({
           </main>
           <Footer />
         </div>
-        <Analytics />
-        <SpeedInsights />
+        {/* Only load analytics in production */}
+        {process.env.NODE_ENV === 'production' && (
+          <>
+            <Analytics />
+            <SpeedInsights />
+          </>
+        )}
       </body>
     </html>
   );
