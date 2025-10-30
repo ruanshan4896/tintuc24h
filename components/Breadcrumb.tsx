@@ -10,6 +10,8 @@ interface BreadcrumbProps {
 }
 
 export default function Breadcrumb({ items }: BreadcrumbProps) {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tintuc24h-seven.vercel.app';
+  
   // Generate JSON-LD structured data for SEO
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -18,7 +20,12 @@ export default function Breadcrumb({ items }: BreadcrumbProps) {
       '@type': 'ListItem',
       position: index + 1,
       name: item.label,
-      ...(item.href && { item: item.href }),
+      ...(item.href && { 
+        item: {
+          '@id': `${baseUrl}${item.href}`,
+          '@type': 'WebPage',
+        }
+      }),
     })),
   };
 

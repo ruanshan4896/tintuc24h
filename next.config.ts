@@ -27,6 +27,8 @@ const nextConfig: NextConfig = {
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    // Add quality values to avoid warnings
+    unoptimized: false,
   },
   experimental: {
     optimizePackageImports: ['react-markdown', 'date-fns', 'lucide-react'],
