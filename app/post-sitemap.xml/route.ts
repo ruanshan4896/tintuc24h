@@ -11,9 +11,15 @@ export async function GET() {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tintuc.vercel.app';
 
   try {
+    console.log('📰 Post Sitemap: Starting generation...');
+    
     // Get all published articles
     const articles = await getArticlesServer(true);
-    console.log(`📰 Post Sitemap: Generating for ${articles.length} articles`);
+    console.log(`📰 Post Sitemap: Found ${articles.length} articles`);
+    
+    if (articles.length === 0) {
+      console.warn('⚠️ No articles found! Returning empty sitemap.');
+    }
 
     // Generate XML
     const urls = articles
@@ -47,8 +53,14 @@ ${urls}
         'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
       },
     });
-  } catch (error) {
-    console.error('❌ Error generating post sitemap:', error);
+  } catch (error: any) {
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ ERROR GENERATING POST SITEMAP');
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('Error Type:', error.constructor?.name);
+    console.error('Error Message:', error.message);
+    console.error('Error Stack:', error.stack);
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     // Return empty sitemap on error
     const emptySitemap = `<?xml version="1.0" encoding="UTF-8"?>
