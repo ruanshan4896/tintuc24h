@@ -56,17 +56,33 @@ export async function GET() {
       .filter(Boolean)
       .join('\n');
 
+    // Ensure we have URLs
+    if (!urls.trim()) {
+      console.warn('⚠️ No valid category URLs generated!');
+      const emptySitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`;
+      return new NextResponse(emptySitemap, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/xml; charset=utf-8',
+        },
+      });
+    }
+
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls}
 </urlset>`;
 
+    console.log(`✅ Category Sitemap: Generated successfully with ${CATEGORIES.length} categories`);
+
     return new NextResponse(sitemap, {
       status: 200,
       headers: {
-        'Content-Type': 'application/xml',
+        'Content-Type': 'application/xml; charset=utf-8',
         'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=604800',
+        'X-Robots-Tag': 'noindex',
       },
     });
   } catch (error: any) {
