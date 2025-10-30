@@ -157,22 +157,46 @@ Fetch 6: Key #1 → Success (quay lại key 1)
 
 ## 🔄 CÁCH HOẠT ĐỘNG
 
-### Round-Robin Algorithm:
+### Round-Robin + Auto-Retry Algorithm:
 
 ```typescript
-Request 1  → Key 1
-Request 2  → Key 2
-Request 3  → Key 3
-Request 4  → Key 1 (quay lại)
-Request 5  → Key 2
+Request 1  → Key 1 ✅ Success
+Request 2  → Key 2 ✅ Success
+Request 3  → Key 3 ✅ Success
+Request 4  → Key 1 ❌ Quota exceeded
+           → Key 2 ✅ Success (auto retry!)
+Request 5  → Key 3 ✅ Success
 ...
 ```
 
 **Lợi ích:**
 - ✅ Phân bổ đều requests giữa các keys
+- ✅ **Tự động retry với key khác nếu gặp 429 error**
 - ✅ Tránh 1 key bị hết quota nhanh
 - ✅ Tối đa hóa số requests/ngày
-- ✅ Tự động fallback nếu 1 key fail
+- ✅ Resilient - chỉ fail khi TẤT CẢ keys hết quota
+
+### Chi Tiết Logic:
+
+**Khi Key #1 hết quota:**
+```
+1. Try Key #1 → 429 Error
+   ⚠️  Key #1 quota exceeded, trying next key...
+
+2. Try Key #2 → Success! ✅
+   ✅ SUCCESS with Key #2
+
+3. Update rotation: Next request sẽ bắt đầu từ Key #3
+```
+
+**Khi TẤT CẢ keys hết quota:**
+```
+1. Try Key #1 → 429 Error
+2. Try Key #2 → 429 Error
+3. Try Key #3 → 429 Error
+❌ All keys failed!
+💡 TIP: All keys exceeded quota. Wait for reset or add more keys.
+```
 
 ---
 
