@@ -57,22 +57,31 @@ export default async function HomePage() {
         {/* Simple gradient background for better performance */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent_50%)]" aria-hidden="true"></div>
         
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 relative z-10">
-          <div className="flex items-center gap-3 mb-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 relative z-10 text-center">
+          {/* Icons - Centered */}
+          <div className="flex items-center justify-center gap-3 mb-6">
             <Newspaper className="w-10 h-10 md:w-12 md:h-12" />
             <div className="h-10 w-1 bg-white/30"></div>
             <TrendingUp className="w-8 h-8 md:w-10 md:h-10" />
           </div>
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold mb-6 leading-tight">
-            Tin Tức<br />
-            <span className="text-blue-200">Mỗi Ngày</span>
+          
+          {/* Title */}
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold mb-4 leading-tight">
+            📰 Ctrl Z
           </h1>
-          <p className="text-lg md:text-xl lg:text-2xl text-blue-100 max-w-2xl leading-relaxed">
-            Cập nhật tin tức nóng hổi từ mọi lĩnh vực: Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí
+          
+          {/* Slogan */}
+          <p className="text-xl md:text-2xl lg:text-3xl text-blue-100 font-semibold mb-3 leading-relaxed">
+            Hoàn tác tin giả - Khôi phục sự thật
           </p>
           
-          {/* Quick category links */}
-          <div className="flex flex-wrap gap-3 mt-8">
+          {/* Sub-description */}
+          <p className="text-base md:text-lg text-blue-200 max-w-3xl mx-auto leading-relaxed mb-8">
+            Tin tức minh bạch, đa chiều từ mọi lĩnh vực: Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí, Game
+          </p>
+          
+          {/* Quick category links - Centered */}
+          <div className="flex flex-wrap justify-center gap-3 mt-8">
             {CATEGORIES.map((category) => (
               <Link
                 key={category}

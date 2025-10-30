@@ -37,14 +37,14 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://tintuc24h-seven.vercel.app'),
   title: {
-    default: 'TinTức - Website Tin Tức Hiện Đại',
-    template: '%s | TinTức'
+    default: 'Ctrl Z - Hoàn tác tin giả, Khôi phục sự thật',
+    template: '%s | Ctrl Z'
   },
-  description: 'Website tin tức được xây dựng với Next.js và Supabase. Cập nhật tin tức công nghệ, SEO và nhiều chủ đề khác.',
-  keywords: ['tin tức', 'news', 'công nghệ', 'SEO', 'Next.js', 'Vietnam', 'thể thao', 'sức khỏe', 'ô tô', 'giải trí'],
-  authors: [{ name: 'TinTức Team' }],
-  creator: 'TinTức',
-  publisher: 'TinTức',
+  description: 'Ctrl Z - Tin tức minh bạch, đa chiều. Hoàn tác tin giả, khôi phục sự thật. Cập nhật tin tức Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí, Game.',
+  keywords: ['ctrl z', 'tin tức', 'news', 'công nghệ', 'thể thao', 'sức khỏe', 'ô tô', 'giải trí', 'game', 'tin tức minh bạch', 'Vietnam'],
+  authors: [{ name: 'Ctrl Z Team' }],
+  creator: 'Ctrl Z',
+  publisher: 'Ctrl Z',
   formatDetection: {
     email: false,
     address: false,
@@ -54,22 +54,22 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'vi_VN',
     url: '/',
-    siteName: 'TinTức',
-    title: 'TinTức - Website Tin Tức Hiện Đại',
-    description: 'Website tin tức được xây dựng với Next.js và Supabase',
+    siteName: 'Ctrl Z',
+    title: 'Ctrl Z - Hoàn tác tin giả, Khôi phục sự thật',
+    description: 'Tin tức minh bạch, đa chiều từ mọi lĩnh vực: Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí, Game',
     images: [
       {
         url: '/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'TinTức',
+        alt: 'Ctrl Z',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'TinTức - Website Tin Tức Hiện Đại',
-    description: 'Website tin tức được xây dựng với Next.js và Supabase',
+    title: 'Ctrl Z - Hoàn tác tin giả, Khôi phục sự thật',
+    description: 'Tin tức minh bạch, đa chiều từ mọi lĩnh vực: Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí, Game',
     images: ['/og-image.jpg'],
   },
   robots: {

@@ -39,7 +39,7 @@ export default function Footer() {
         {/* Copyright */}
         <div className="border-t border-gray-800 mt-8 pt-6 text-center">
           <p className="text-sm text-gray-500">
-            &copy; {new Date().getFullYear()} TinTức. All rights reserved.
+            &copy; {new Date().getFullYear()} Ctrl Z - Hoàn tác tin giả, Khôi phục sự thật. All rights reserved.
           </p>
         </div>
       </div>
