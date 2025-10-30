@@ -35,21 +35,31 @@ export async function GET() {
       });
     }
 
-    // Generate XML
+    // Generate XML with null checks
     const urls = articles
+      .filter((article) => article.slug && article.title) // Skip invalid articles
       .map((article) => {
-        const lastmod = new Date(article.updated_at || article.created_at).toISOString();
-        return `  <url>
+        try {
+          const lastmod = new Date(article.updated_at || article.created_at || Date.now()).toISOString();
+          const imageUrl = article.image_url || `${baseUrl}/og-image.jpg`;
+          const title = escapeXml(article.title || 'Untitled');
+          
+          return `  <url>
     <loc>${baseUrl}/articles/${article.slug}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
     <image:image>
-      <image:loc>${article.image_url || `${baseUrl}/og-image.jpg`}</image:loc>
-      <image:title>${escapeXml(article.title)}</image:title>
+      <image:loc>${imageUrl}</image:loc>
+      <image:title>${title}</image:title>
     </image:image>
   </url>`;
+        } catch (err: any) {
+          console.warn(`⚠️ Skipping article ${article.id}: ${err.message}`);
+          return '';
+        }
       })
+      .filter(Boolean) // Remove empty strings
       .join('\n');
 
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
