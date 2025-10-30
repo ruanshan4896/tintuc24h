@@ -195,6 +195,7 @@ export default function ArticleForm({ initialData, onSubmit, loading }: ArticleF
             <option value="Sức khỏe">Sức khỏe</option>
             <option value="Ô tô">Ô tô</option>
             <option value="Giải trí">Giải trí</option>
+            <option value="Game">Game</option>
           </select>
         </div>
 
