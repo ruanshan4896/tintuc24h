@@ -6,6 +6,26 @@ import { CATEGORIES } from '@/lib/constants';
  */
 export const revalidate = 86400; // 24 hours
 
+/**
+ * Escape URL for XML
+ */
+function escapeUrl(url: string): string {
+  if (!url) return '';
+  
+  try {
+    // Validate URL first
+    new URL(url);
+    return url
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  } catch {
+    return ''; // Invalid URL
+  }
+}
+
 export async function GET() {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tintuc.vercel.app';
   
@@ -104,26 +124,6 @@ ${urls}
         'Content-Type': 'application/xml',
       },
     });
-  }
-}
-
-/**
- * Escape URL for XML
- */
-function escapeUrl(url: string): string {
-  if (!url) return '';
-  
-  try {
-    // Validate URL first
-    new URL(url);
-    return url
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&apos;');
-  } catch {
-    return ''; // Invalid URL
   }
 }
 

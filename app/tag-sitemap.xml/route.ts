@@ -6,6 +6,26 @@ import { getArticlesServer } from '@/lib/api/articles-server';
  */
 export const revalidate = 3600; // 1 hour
 
+/**
+ * Escape URL for XML
+ */
+function escapeUrl(url: string): string {
+  if (!url) return '';
+  
+  try {
+    // Validate URL first
+    new URL(url);
+    return url
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  } catch {
+    return ''; // Invalid URL
+  }
+}
+
 export async function GET() {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tintuc.vercel.app';
   const currentDate = new Date().toISOString();
@@ -107,26 +127,6 @@ ${urls}
         'Content-Type': 'application/xml',
       },
     });
-  }
-}
-
-/**
- * Escape URL for XML
- */
-function escapeUrl(url: string): string {
-  if (!url) return '';
-  
-  try {
-    // Validate URL first
-    new URL(url);
-    return url
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&apos;');
-  } catch {
-    return ''; // Invalid URL
   }
 }
 
