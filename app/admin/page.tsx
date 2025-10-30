@@ -44,7 +44,7 @@ export default function AdminPage() {
         if (response.ok && result.success) {
           // Revalidate sitemap after deleting article
           try {
-            await fetch('/api/revalidate', {
+            await fetch('/api/admin/revalidate', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ path: '/sitemap.xml' }),
@@ -126,7 +126,7 @@ export default function AdminPage() {
 
       // Revalidate sitemap
       try {
-        await fetch('/api/revalidate', {
+        await fetch('/api/admin/revalidate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ path: '/sitemap.xml' }),

@@ -24,7 +24,7 @@ export default function NewArticlePage() {
       if (response.ok && result.data) {
         // Revalidate sitemap after creating article
         try {
-          await fetch('/api/revalidate', {
+          await fetch('/api/admin/revalidate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ path: '/sitemap.xml' }),

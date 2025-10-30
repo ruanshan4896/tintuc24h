@@ -55,7 +55,7 @@ export default function EditArticlePage({ params }: { params: Promise<{ id: stri
       if (response.ok && result.data) {
         // Revalidate sitemap after updating article
         try {
-          await fetch('/api/revalidate', {
+          await fetch('/api/admin/revalidate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ path: '/sitemap.xml' }),
