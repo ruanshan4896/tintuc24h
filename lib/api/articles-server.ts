@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { Article } from '@/lib/types/article';
+import { toSlug } from '@/lib/utils/slug';
 
 // Server-side functions using Service Role Key (bypass RLS)
 
@@ -59,13 +60,18 @@ export async function getArticlesServer(published = true): Promise<Article[]> {
   return data as Article[];
 }
 
-export async function getArticlesByTagServer(tag: string, published = true): Promise<Article[]> {
-  console.log('getArticlesByTagServer - Searching for tag:', tag);
+export async function getArticlesByTagServer(tagSlug: string, published = true): Promise<Article[]> {
+  console.log('getArticlesByTagServer - Searching for tag slug:', tagSlug);
   
+  // Normalize input: ensure it's a clean slug
+  const normalizedSlug = toSlug(tagSlug);
+  
+  console.log('  - Normalized slug:', normalizedSlug);
+  
+  // Get all articles
   const query = supabaseAdmin
     .from('articles')
     .select('*')
-    .contains('tags', [tag])
     .order('created_at', { ascending: false });
 
   if (published) {
@@ -79,8 +85,32 @@ export async function getArticlesByTagServer(tag: string, published = true): Pro
     return [];
   }
 
-  console.log('getArticlesByTagServer - Found:', data?.length || 0, 'articles');
-  return data as Article[];
+  // Filter articles by matching tag slug
+  const filteredArticles = (data || []).filter((article) => {
+    if (!article.tags || !Array.isArray(article.tags)) return false;
+    
+    // Check if any tag's slug matches the search slug
+    // This handles both "chiến thuật" and "chien-thuat" in database
+    return article.tags.some((tag: string) => {
+      const tagSlug = toSlug(tag);
+      const isMatch = tagSlug === normalizedSlug;
+      
+      if (isMatch) {
+        console.log(`  ✅ Match found: "${tag}" → slug: "${tagSlug}"`);
+      }
+      
+      return isMatch;
+    });
+  });
+
+  console.log('getArticlesByTagServer - Found:', filteredArticles.length, 'articles');
+  
+  if (filteredArticles.length === 0) {
+    console.warn('⚠️ No articles found for tag slug:', normalizedSlug);
+    console.log('  - Check if tags in database match this slug');
+  }
+  
+  return filteredArticles as Article[];
 }
 
 export async function searchArticlesServer(searchTerm: string): Promise<Article[]> {

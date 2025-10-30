@@ -1,4 +1,4 @@
-import { getArticles } from '@/lib/api/articles';
+import { getArticles, getRelatedArticles } from '@/lib/api/articles';
 import { getArticleBySlugServer, getArticlesServer } from '@/lib/api/articles-server';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
@@ -8,6 +8,9 @@ import remarkGfm from 'remark-gfm';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import type { Metadata } from 'next';
+import RelatedArticles from '@/components/RelatedArticles';
+import Breadcrumb from '@/components/Breadcrumb';
+import { getCategorySlug, toSlug } from '@/lib/utils/slug';
 
 interface ArticlePageProps {
   params: Promise<{
@@ -101,6 +104,14 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     notFound();
   }
 
+  // Fetch related articles
+  const relatedArticles = await getRelatedArticles(
+    article.id,
+    article.category,
+    article.tags || [],
+    4
+  );
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'NewsArticle',
@@ -132,19 +143,13 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       
       <article className="bg-white">
         {/* Breadcrumb */}
-        <div className="bg-gray-50 border-b">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <nav className="flex items-center space-x-2 text-sm text-gray-600">
-              <Link href="/" className="hover:text-blue-600">Trang chủ</Link>
-              <span>/</span>
-              <Link href={`/category/${article.category.toLowerCase()}`} className="hover:text-blue-600">
-                {article.category}
-              </Link>
-              <span>/</span>
-              <span className="text-gray-900">{article.title}</span>
-            </nav>
-          </div>
-        </div>
+        <Breadcrumb
+          items={[
+            { label: 'Trang chủ', href: '/' },
+            { label: article.category, href: `/category/${getCategorySlug(article.category)}` },
+            { label: article.title },
+          ]}
+        />
 
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           {/* Article Header */}
@@ -202,7 +207,31 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             prose-code:text-gray-900 dark:prose-code:text-gray-100
             prose-pre:bg-gray-800 dark:prose-pre:bg-gray-900
             prose-li:text-gray-800 dark:prose-li:text-gray-200">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <ReactMarkdown 
+              remarkPlugins={[remarkGfm]}
+              components={{
+                a: ({ node, href, children, ...props }) => (
+                  <Link 
+                    href={href || '#'} 
+                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline transition"
+                    {...props}
+                  >
+                    {children}
+                  </Link>
+                ),
+                img: ({ node, src, alt, ...props }) => (
+                  src && typeof src === 'string' ? (
+                    <Image
+                      src={src}
+                      alt={alt || ''}
+                      width={800}
+                      height={450}
+                      className="rounded-lg my-4 w-full h-auto"
+                    />
+                  ) : null
+                ),
+              }}
+            >
               {article.content}
             </ReactMarkdown>
           </div>
@@ -215,7 +244,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                 {article.tags.map((tag) => (
                   <Link
                     key={tag}
-                    href={`/tag/${encodeURIComponent(tag)}`}
+                    href={`/tag/${toSlug(tag)}`}
                     className="px-4 py-2 bg-purple-50 text-purple-600 hover:bg-purple-100 rounded-lg transition font-medium"
                   >
                     #{tag}
@@ -248,8 +277,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             </div>
           </div>
 
+          {/* Related Articles */}
+          <RelatedArticles articles={relatedArticles} />
+
           {/* Back to Home */}
-          <div className="text-center">
+          <div className="text-center mt-12">
             <Link
               href="/"
               className="inline-block px-8 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"

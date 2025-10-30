@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Article } from '@/lib/types/article';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { toSlug } from '@/lib/utils/slug';
 
 interface ArticleCardProps {
   article: Article;
@@ -59,7 +60,7 @@ export default function ArticleCard({ article }: ArticleCardProps) {
             {article.tags.map((tag) => (
               <Link
                 key={tag}
-                href={`/tag/${encodeURIComponent(tag)}`}
+                href={`/tag/${toSlug(tag)}`}
                 className="text-xs text-purple-600 bg-purple-50 hover:bg-purple-100 px-2 py-1 rounded transition-colors"
                 onClick={(e) => e.stopPropagation()}
               >

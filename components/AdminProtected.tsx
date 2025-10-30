@@ -17,8 +17,8 @@ export default function AdminProtected({ children }: { children: React.ReactNode
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center" suppressHydrationWarning>
+        <div className="text-center" suppressHydrationWarning>
           <LoadingSpinner />
           <p className="mt-4 text-gray-600">Đang kiểm tra quyền truy cập...</p>
         </div>

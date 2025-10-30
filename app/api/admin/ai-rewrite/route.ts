@@ -110,7 +110,47 @@ export async function POST(request: NextRequest) {
 
       const prompt = `Bạn là một SEO Content Specialist và biên tập viên tin tức chuyên nghiệp.
 
-Nhiệm vụ: Viết MỘT BÀI BÁO HOÀN TOÀN MỚI dựa trên thông tin từ bài gốc. KHÔNG viết lại từng câu - hãy VIẾT LẠI TOÀN BỘ như bạn đang tự viết một bài báo mới.
+Nhiệm vụ: Phân tích keyword intent và viết MỘT BÀI BÁO HOÀN TOÀN MỚI để giải quyết intent đó. KHÔNG viết lại từng câu - hãy VIẾT LẠI TOÀN BỘ như bạn đang tự viết một bài báo mới.
+
+## 📊 BƯỚC 1: PHÂN TÍCH KEYWORD & SEARCH INTENT (BẮT BUỘC!)
+
+**Trước khi viết, hãy tự phân tích (KHÔNG xuất ra phần này):**
+
+1. **Keyword Chính:**
+   - Từ tiêu đề và nội dung, tìm từ khóa chính mà người dùng sẽ search
+   - VD: "cách làm bánh mì", "iphone 15 giá bao nhiêu", "tại sao trẻ khóc đêm"
+
+2. **Search Intent (Ý Định Tìm Kiếm):**
+   - **Informational (Thông tin):** Người dùng muốn học hỏi, hiểu biết
+     → Cung cấp kiến thức, giải thích, hướng dẫn chi tiết
+   - **Commercial Investigation (So sánh):** Người dùng cân nhắc mua/dùng
+     → So sánh, review, ưu/nhược điểm, đề xuất
+   - **Transactional (Giao dịch):** Người dùng muốn mua/đăng ký ngay
+     → Giá cả, khuyến mãi, call-to-action rõ ràng
+   - **Navigational (Điều hướng):** Người dùng tìm một trang/thương hiệu cụ thể
+     → Thông tin về thương hiệu, sản phẩm, dịch vụ
+
+3. **Viết Content Theo Intent:**
+   - **Informational:** Giải thích TẠI SAO + CÁCH NÀO, cung cấp giá trị kiến thức
+   - **Commercial:** Phân tích ưu/nhược, so sánh, gợi ý lựa chọn
+   - **Transactional:** Nhấn mạnh giá trị, lợi ích, tạo urgency
+   - **Navigational:** Tập trung vào thương hiệu/sản phẩm cụ thể
+
+**VÍ DỤ PHÂN TÍCH:**
+
+*Bài gốc: "iPhone 15 ra mắt với chip A17 Pro, camera 48MP, giá từ 799 USD"*
+
+- **Keyword:** "iphone 15", "iphone 15 giá"
+- **Intent:** Commercial Investigation (người dùng đang cân nhắc mua)
+- **Content Strategy:**
+  - Đánh giá chi tiết tính năng mới (chip A17 Pro, camera 48MP)
+  - So sánh với iPhone 14 và đối thủ (Samsung, Google)
+  - Phân tích giá 799 USD có hợp lý không
+  - Gợi ý: nên mua hay đợi giảm giá
+  - SEO Title: "iPhone 15 Có Đáng Mua? Đánh Giá Chi Tiết Tính Năng & Giá"
+  - SEO Desc: "iPhone 15 chip A17 Pro, camera 48MP giá từ 799 USD. So sánh với iPhone 14, phân tích ưu nhược điểm để quyết định có nên mua ngay."
+
+---
 
 ## ⚠️ QUY TẮC ĐẦU RA (OUTPUT RULES) - BẮT BUỘC:
 
@@ -202,6 +242,29 @@ Bài gốc: "Theo nghiên cứu của WHO năm 2024, ô nhiễm không khí ở 
 - Sử dụng ### cho sub-heading (H3) nếu cần
 - Mỗi heading chứa keywords tự nhiên
 - Headings mô tả rõ nội dung phần đó
+
+**Hình Ảnh Minh Họa (CRITICAL!):**
+- Chèn ĐÚNG 1 placeholder hình ảnh vào giữa bài viết
+- Format: [IMAGE_PLACEHOLDER_1]
+- Đặt sau heading đầu tiên (##) hoặc giữa các đoạn quan trọng
+- KHÔNG đặt ở đầu bài (trước heading đầu) hoặc cuối bài
+- VÍ DỤ vị trí chèn:
+
+\`\`\`
+## Tiêu Đề Chính
+
+Đoạn mở đầu giới thiệu chủ đề...
+
+[IMAGE_PLACEHOLDER_1]
+
+## Phân Tích Chi Tiết
+
+Nội dung chi tiết về vấn đề...
+
+## Kết Luận
+
+Tóm tắt và đánh giá cuối cùng...
+\`\`\`
 
 **Đoạn văn:**
 - Mỗi đoạn: 3-5 câu (60-100 từ)
@@ -312,13 +375,28 @@ TAGS: [tag1, tag2, tag3, tag4, tag5]
 \`\`\`
 
 **YÊU CẦU:**
-- SEO_TITLE: Viết LẠI hoàn toàn, KHÁC tiêu đề gốc, hấp dẫn, có số liệu nếu có
-- SEO_DESC: Ngắn gọn, súc tích, hook + benefit + CTA
-- TAGS: 3-7 tags, viết thường, ngắn gọn (1-3 từ), liên quan đến nội dung
+- **SEO_TITLE (PHẢI PHÙ HỢP VỚI INTENT!):**
+  - Viết LẠI hoàn toàn, KHÁC tiêu đề gốc, 50-60 ký tự
+  - Chứa keyword chính + số liệu/năm nếu có
+  - Phản ánh đúng intent:
+    * Informational: "Cách...", "Tại Sao...", "Hướng Dẫn..."
+    * Commercial: "Review...", "So Sánh...", "Có Nên Mua..."
+    * Transactional: "Giá...", "Mua Ngay...", "Khuyến Mãi..."
+  
+- **SEO_DESC (PHẢI GIẢI QUYẾT INTENT!):**
+  - 140-155 ký tự, ngắn gọn, súc tích
+  - Hook + giải quyết intent + CTA
+  - VD Informational: "Tìm hiểu nguyên nhân, cách khắc phục hiệu quả..."
+  - VD Commercial: "So sánh chi tiết ưu/nhược, đánh giá có nên mua..."
+  
+- **TAGS (PHẢN ÁNH KEYWORD + INTENT):**
+  - 3-7 tags, viết thường, ngắn gọn (1-3 từ)
+  - Bao gồm: keyword chính + từ liên quan + intent-related tags
   - Format: [tag1, tag2, tag3] - dùng dấu phẩy ngăn cách
-  - Ví dụ: sức khỏe, ô nhiễm, hà nội, công nghệ, ai
+  - Ví dụ: [iphone 15, smartphone, review, công nghệ, mua sắm]
   - KHÔNG dùng hashtag (#)
-- Đặt ở CUỐI CÙNG của bài viết
+  
+- Đặt ở CUỐI CÙNG của bài viết (sau [IMAGE_PLACEHOLDER_1] nếu có)
 
 **VÍ DỤ:**
 \`\`\`
@@ -509,7 +587,16 @@ TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
     let finalContent = rewrittenContent;
 
     if (generateMetadata) {
-      const metadataMatch = rewrittenContent.match(/---\s*\nSEO_TITLE:\s*(.+)\s*\nSEO_DESC:\s*(.+)\s*\nTAGS:\s*\[(.+)\]\s*$/);
+      // Updated regex to handle optional trailing "---"
+      // Matches format:
+      // ---
+      // SEO_TITLE: ...
+      // SEO_DESC: ...
+      // TAGS: [...]
+      // ---  (optional)
+      const metadataRegex = /---[\s\n]*SEO_TITLE:\s*(.+?)[\s\n]+SEO_DESC:\s*(.+?)[\s\n]+TAGS:\s*\[(.+?)\][\s\n]*(?:---)?[\s\n]*$/;
+      const metadataMatch = rewrittenContent.match(metadataRegex);
+      
       if (metadataMatch) {
         seoTitle = metadataMatch[1].trim();
         seoDescription = metadataMatch[2].trim();
@@ -521,13 +608,16 @@ TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
           .map(tag => tag.trim().toLowerCase())
           .filter(tag => tag.length > 0 && tag.length < 50);
         
-        // Remove metadata from content
-        finalContent = rewrittenContent.replace(/---\s*\nSEO_TITLE:[\s\S]*$/, '').trim();
+        // Remove metadata from content (everything from first "---" before SEO_TITLE)
+        finalContent = rewrittenContent.replace(/---[\s\n]*SEO_TITLE:[\s\S]*$/, '').trim();
         
         console.log('📋 Extracted Metadata:');
         console.log('  - SEO Title:', seoTitle);
         console.log('  - SEO Desc:', seoDescription);
         console.log('  - Tags:', tags);
+      } else {
+        console.warn('⚠️ Could not extract metadata from AI response');
+        console.log('Last 500 chars of content:', rewrittenContent.slice(-500));
       }
     }
 

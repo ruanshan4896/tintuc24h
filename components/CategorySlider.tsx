@@ -57,7 +57,7 @@ export default function CategorySlider({ category, articles, categorySlug, icon 
   if (articles.length === 0) return null;
 
   return (
-    <section className="mb-12">
+    <section className="mb-12" suppressHydrationWarning>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">

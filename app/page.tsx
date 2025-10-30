@@ -49,7 +49,7 @@ export default async function HomePage() {
   const featuredArticle = [...articles].sort((a, b) => b.views - a.views)[0];
 
   return (
-    <div className="bg-gradient-to-b from-gray-50 to-white min-h-screen">
+    <div className="bg-gradient-to-b from-gray-50 to-white min-h-screen" suppressHydrationWarning>
       {/* Modern Hero Section */}
       <section className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-purple-800 text-white overflow-hidden">
         {/* Animated background pattern */}

@@ -4,10 +4,14 @@ import Parser from 'rss-parser';
 import TurndownService from 'turndown';
 import type { RssImportResult } from '@/lib/types/rss';
 import { scrapeFullArticle, extractMainImage } from '@/lib/utils/scraper';
-import { searchUnsplashImages, extractImageKeywords } from '@/lib/utils/unsplash';
+import { addKeywordLinks } from '@/lib/utils/keyword-linking';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// Increase route timeout for RSS fetching + AI processing (Vercel allows up to 60s on Hobby plan)
+export const maxDuration = 60; // seconds
 
 const parser = new Parser({
-  timeout: 10000,
+  timeout: 30000, // 30 seconds for RSS parsing
   headers: {
     'User-Agent': 'Mozilla/5.0 (compatible; NewsAggregator/1.0)',
   },
@@ -17,6 +21,124 @@ const turndownService = new TurndownService({
   headingStyle: 'atx',
   codeBlockStyle: 'fenced',
 });
+
+// Helper function to decode HTML entities
+function decodeHtmlEntities(text: string): string {
+  const entities: { [key: string]: string } = {
+    "&amp;": "&",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&quot;": "\"",
+    "&#039;": "'",
+    "&apos;": "'",
+    "&nbsp;": " ",
+    "&mdash;": "—",
+    "&ndash;": "–",
+    "&hellip;": "…",
+    "&lsquo;": "'",
+    "&rsquo;": "'",
+    "&ldquo;": '"',
+    "&rdquo;": '"',
+  };
+
+  // Replace named entities
+  let decoded = text;
+  for (const [entity, char] of Object.entries(entities)) {
+    decoded = decoded.replace(new RegExp(entity, 'g'), char);
+  }
+
+  // Replace numeric entities (&#123; or &#xAB;)
+  decoded = decoded.replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)));
+  decoded = decoded.replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+
+  return decoded;
+}
+
+// Helper function to generate meaningful image caption AND alt text using AI
+async function generateImageCaptionAndAlt(
+  articleTitle: string
+): Promise<{ caption: string; alt: string }> {
+  try {
+    // Get first available Google AI key
+    let googleApiKey = process.env.GOOGLE_AI_API_KEY_1 || process.env.GOOGLE_AI_API_KEY;
+    
+    if (!googleApiKey) {
+      console.warn('⚠️ No Google AI key, using default caption & alt');
+      // Fallback: Simple caption and alt based on title
+      const mainTopic = articleTitle.split(':')[0].trim();
+      return {
+        caption: articleTitle.length > 60 ? articleTitle.substring(0, 60) + '...' : articleTitle,
+        alt: mainTopic
+      };
+    }
+
+    const genAI = new GoogleGenerativeAI(googleApiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
+
+    // Generate BOTH caption (for display) and alt text (for SEO/accessibility)
+    const prompt = `Tạo chú thích (caption) và mô tả thay thế (alt text) cho hình ảnh minh họa trong bài viết tin tức.
+
+Tiêu đề bài viết: "${articleTitle}"
+
+YÊU CẦU:
+1. CAPTION (8-12 từ): Câu mô tả ngắn gọn, chuyên nghiệp về chủ đề bài viết
+2. ALT (5-8 từ): Mô tả ngắn cho SEO/accessibility, chứa keywords chính
+
+Format trả về (BẮT BUỘC):
+CAPTION: [câu caption ở đây]
+ALT: [mô tả alt ở đây]
+
+VÍ DỤ:
+Input: "iPhone 15 Ra Mắt Với Chip A17 Pro Mạnh Mẽ"
+CAPTION: Công nghệ smartphone mới nhất từ Apple
+ALT: iPhone 15 chip A17 Pro
+
+Input: "VinFast VF 7 Hoàn Thành Hành Trình 50.000km"
+CAPTION: Xe điện Việt Nam chinh phục thị trường quốc tế
+ALT: Xe điện VinFast VF 7
+
+Input: "Ronaldo Ghi Bàn Thắng Thứ 900 Trong Sự Nghiệp"
+CAPTION: Huyền thoại bóng đá chinh phục cột mốc lịch sử
+ALT: Cristiano Ronaldo bóng đá
+
+Trả về NGAY theo format (KHÔNG giải thích):`;
+
+    const result = await model.generateContent(prompt);
+    const response = result.response.text().trim();
+    
+    // Parse response
+    const captionMatch = response.match(/CAPTION:\s*(.+)/i);
+    const altMatch = response.match(/ALT:\s*(.+)/i);
+    
+    if (captionMatch && altMatch) {
+      const caption = captionMatch[1].replace(/^["']|["']$/g, '').trim();
+      const alt = altMatch[1].replace(/^["']|["']$/g, '').trim();
+      
+      console.log(`✅ Generated for "${articleTitle.substring(0, 50)}..."`);
+      console.log(`   Caption: "${caption}"`);
+      console.log(`   Alt: "${alt}"`);
+      
+      return { caption, alt };
+    } else {
+      // Fallback if parsing fails
+      console.warn('⚠️ Could not parse AI response, using fallback');
+      const mainTopic = articleTitle.split(':')[0].trim();
+      return {
+        caption: response.split('\n')[0].trim() || mainTopic,
+        alt: mainTopic
+      };
+    }
+    
+  } catch (error: any) {
+    console.error('❌ Error generating caption & alt:', error.message);
+    // Fallback: Extract main topic from title
+    const mainTopic = articleTitle.split(':')[0].trim();
+    return {
+      caption: `Hình minh họa: ${mainTopic}`,
+      alt: mainTopic
+    };
+  }
+}
 
 // Helper function to clean and convert HTML to Markdown
 function htmlToMarkdown(html: string): string {
@@ -30,8 +152,11 @@ function htmlToMarkdown(html: string): string {
     // Convert to markdown
     const markdown = turndownService.turndown(cleaned);
     
+    // Decode HTML entities
+    const decodedMarkdown = decodeHtmlEntities(markdown);
+    
     // Clean up extra whitespace
-    return markdown.replace(/\n{3,}/g, '\n\n').trim();
+    return decodedMarkdown.replace(/\n{3,}/g, '\n\n').trim();
   } catch (error) {
     console.error('Error converting HTML to Markdown:', error);
     return html;
@@ -156,8 +281,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Prepare article data
-        let title = item.title || 'Untitled';
-        let description = item.contentSnippet || item.summary || '';
+        let title = decodeHtmlEntities(item.title || 'Untitled');
+        let description = decodeHtmlEntities(item.contentSnippet || item.summary || '');
         let content = htmlToMarkdown(item.content || item['content:encoded'] || item.summary || '');
         let imageUrl = extractImageUrl(item.content || '', item.enclosure);
         // Fixed author for all articles on the website
@@ -293,34 +418,43 @@ export async function POST(request: NextRequest) {
           console.log('⏭️ Skipping AI Rewrite (disabled or content too short)');
         }
 
-        // Search and insert Unsplash images
-        console.log('🖼️ Searching for images from Unsplash...');
-        const imageKeywords = await extractImageKeywords(title);
-        const unsplashImages = await searchUnsplashImages(imageKeywords, 2);
-
-        if (unsplashImages && unsplashImages.length > 0) {
-          // Use first image as featured image (if no image from RSS)
-          if (!imageUrl) {
-            imageUrl = unsplashImages[0].url;
-            console.log(`✅ Using Unsplash image as featured: ${imageUrl}`);
-          }
-
-          // Insert first image after first heading (## ) or at the beginning
-          const firstHeadingMatch = finalContent.match(/^##\s.+$/m);
-          if (firstHeadingMatch) {
-            const insertPosition = firstHeadingMatch.index! + firstHeadingMatch[0].length;
-            const imageMarkdown = `\n\n![${unsplashImages[0].alt}](${unsplashImages[0].url})\n*${unsplashImages[0].credit}*\n`;
-            finalContent = finalContent.slice(0, insertPosition) + imageMarkdown + finalContent.slice(insertPosition);
-            console.log(`✅ Inserted 1 Unsplash image into content`);
+        // Use scraped image if available (NO Unsplash!)
+        if (imageUrl) {
+          console.log(`🖼️ Using scraped image: ${imageUrl}`);
+          
+          // Generate AI caption & alt for scraped image
+          const { caption, alt } = await generateImageCaptionAndAlt(title);
+          
+          // Replace IMAGE_PLACEHOLDER_1 with scraped image
+          if (finalContent.includes('[IMAGE_PLACEHOLDER_1]')) {
+            const imageMarkdown = `\n\n![${alt}](${imageUrl})\n*${caption}*\n`;
+            finalContent = finalContent.replace('[IMAGE_PLACEHOLDER_1]', imageMarkdown);
+            console.log(`✅ Replaced [IMAGE_PLACEHOLDER_1] with scraped image + AI caption & alt`);
           } else {
-            // Insert at beginning if no heading found
-            const imageMarkdown = `![${unsplashImages[0].alt}](${unsplashImages[0].url})\n*${unsplashImages[0].credit}*\n\n`;
-            finalContent = imageMarkdown + finalContent;
-            console.log(`✅ Inserted 1 Unsplash image at beginning`);
+            // If no placeholder, insert after first heading
+            const firstHeadingMatch = finalContent.match(/^##\s.+$/m);
+            if (firstHeadingMatch) {
+              const insertPosition = firstHeadingMatch.index! + firstHeadingMatch[0].length;
+              const imageMarkdown = `\n\n![${alt}](${imageUrl})\n*${caption}*\n`;
+              finalContent = finalContent.slice(0, insertPosition) + imageMarkdown + finalContent.slice(insertPosition);
+              console.log(`✅ Inserted scraped image after first heading + AI caption & alt`);
+            }
           }
         } else {
-          console.warn('⚠️ No images found from Unsplash');
+          console.warn('⚠️ No image available from scraping');
         }
+
+        // Remove any remaining placeholders (if any)
+        finalContent = finalContent.replace(/\[IMAGE_PLACEHOLDER_\d+\]/g, '');
+
+        // Auto Keyword Linking: Add internal links to related articles
+        console.log('🔗 Adding keyword links...');
+        // Generate temporary ID for new article (use slug as identifier)
+        // Note: We'll do a post-process after article is created
+        const tempArticleId = 'temp-' + Date.now();
+        
+        // Add keyword links to content (use AI-generated tags as keywords)
+        finalContent = await addKeywordLinks(finalContent, title, tempArticleId, aiTags);
 
         // Create article
         const { data: article, error: articleError } = await supabaseAdmin

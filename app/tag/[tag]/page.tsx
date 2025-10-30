@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Tag } from 'lucide-react';
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import Breadcrumb from '@/components/Breadcrumb';
 
 interface TagPageProps {
   params: Promise<{
@@ -19,17 +20,25 @@ const TAG_BACKGROUND = 'https://images.unsplash.com/photo-1557683316-973673baf92
 export async function generateMetadata({ params }: TagPageProps): Promise<Metadata> {
   try {
     const resolvedParams = await params;
-    const tag = decodeURIComponent(resolvedParams.tag);
-    const encodedTag = encodeURIComponent(tag);
+    let rawTag = resolvedParams.tag;
+    
+    // Decode URL (handle old encoded URLs)
+    rawTag = decodeURIComponent(rawTag);
+    
+    // Convert to clean slug
+    const tagSlug = rawTag.includes('-') ? rawTag : rawTag.replace(/\s+/g, '-').toLowerCase();
+    
+    // Display name: convert slug back to readable format
+    const tagDisplay = tagSlug.replace(/-/g, ' ');
     
     return {
-      title: `Tag: ${tag} - TinTức`,
-      description: `Tất cả bài viết được gắn tag "${tag}"`,
+      title: `Tag: ${tagDisplay} - TinTức`,
+      description: `Tất cả bài viết được gắn tag "${tagDisplay}"`,
       alternates: {
-        canonical: `/tag/${encodedTag}`,
+        canonical: `/tag/${tagSlug}`,
       },
       openGraph: {
-        url: `/tag/${encodedTag}`,
+        url: `/tag/${tagSlug}`,
       },
     };
   } catch (error) {
@@ -43,17 +52,41 @@ export async function generateMetadata({ params }: TagPageProps): Promise<Metada
 export default async function TagPage({ params }: TagPageProps) {
   try {
     const resolvedParams = await params;
-    const tag = decodeURIComponent(resolvedParams.tag);
-    const articles = await getArticlesByTagServer(tag, true);
+    let rawTag = resolvedParams.tag;
+    
+    // Decode URL (handle old encoded URLs like chi%E1%BA%BFn%20thu%E1%BA%ADt)
+    try {
+      rawTag = decodeURIComponent(rawTag);
+    } catch (e) {
+      // Already decoded or invalid
+    }
+    
+    // Convert to clean slug (handle both "chiến thuật" and "chien-thuat")
+    const tagSlug = rawTag.includes('-') && !rawTag.includes(' ') 
+      ? rawTag // Already a slug
+      : rawTag.replace(/\s+/g, '-').toLowerCase(); // Convert spaces to hyphens
+    
+    // Display name: convert slug back to readable format
+    const tagDisplay = tagSlug.replace(/-/g, ' ');
+    
+    const articles = await getArticlesByTagServer(tagSlug, true);
 
     return (
       <div className="bg-gray-50 min-h-screen">
+        {/* Breadcrumb */}
+        <Breadcrumb
+          items={[
+            { label: 'Trang chủ', href: '/' },
+            { label: `#${tagDisplay}` },
+          ]}
+        />
+
         {/* Header with Background Image */}
         <section className="relative h-[350px] md:h-[450px] overflow-hidden">
           {/* Background Image */}
           <Image
             src={TAG_BACKGROUND}
-            alt={`Tag ${tag}`}
+            alt={`Tag ${tagDisplay}`}
             fill
             priority
             quality={85}
@@ -70,7 +103,7 @@ export default async function TagPage({ params }: TagPageProps) {
               <div className="flex items-center justify-center gap-4 mb-6">
                 <Tag className="w-12 h-12 md:w-16 md:h-16 text-white drop-shadow-lg" />
                 <h1 className="text-5xl md:text-7xl font-bold text-white drop-shadow-2xl">
-                  #{tag}
+                  #{tagDisplay}
                 </h1>
               </div>
               <p className="text-2xl md:text-3xl text-white/90 font-medium drop-shadow-lg">

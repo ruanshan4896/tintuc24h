@@ -3,6 +3,7 @@ import ArticleCard from '@/components/ArticleCard';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import Breadcrumb from '@/components/Breadcrumb';
 
 interface CategoryPageProps {
   params: Promise<{
@@ -54,6 +55,14 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
   return (
     <div className="bg-gray-50 min-h-screen">
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { label: 'Trang chủ', href: '/' },
+          { label: categoryDisplayName },
+        ]}
+      />
+
       {/* Header with Background Image */}
       <section className="relative h-[400px] md:h-[500px] overflow-hidden">
         {/* Background Image */}

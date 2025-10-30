@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getArticles, deleteArticle } from '@/lib/api/articles';
+import { getArticlesForAdmin, deleteArticle } from '@/lib/api/articles';
 import { Article } from '@/lib/types/article';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -9,11 +9,12 @@ import { vi } from 'date-fns/locale';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function AdminPage() {
-  const [articles, setArticles] = useState<Article[]>([]);
+  const [articles, setArticles] = useState<Partial<Article>[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all');
   const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const { user, signOut } = useAuth();
 
   useEffect(() => {
@@ -27,7 +28,7 @@ export default function AdminPage() {
 
   async function loadArticles() {
     setLoading(true);
-    const data = await getArticles(false); // Get all articles including drafts
+    const data = await getArticlesForAdmin(); // ✅ Optimized query - only essential fields
     setArticles(data);
     setLoading(false);
   }
@@ -153,6 +154,70 @@ export default function AdminPage() {
     }
   };
 
+  const handlePublishAllDrafts = async () => {
+    const draftArticles = articles.filter(a => !a.published);
+    
+    if (draftArticles.length === 0) {
+      alert('Không có bài viết nháp nào để xuất bản!');
+      return;
+    }
+
+    const confirmMsg = `Bạn có chắc muốn xuất bản ${draftArticles.length} bài viết nháp?\n\nTất cả sẽ hiển thị công khai ngay lập tức!`;
+    if (!confirm(confirmMsg)) return;
+
+    setIsPublishing(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+      // Publish all draft articles
+      for (const article of draftArticles) {
+        try {
+          const response = await fetch(`/api/admin/articles?id=${article.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ published: true }),
+          });
+
+          if (response.ok) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (error) {
+          console.error(`Failed to publish article ${article.id}:`, error);
+          failCount++;
+        }
+      }
+
+      // Revalidate sitemap
+      try {
+        await fetch('/api/admin/revalidate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: '/sitemap.xml' }),
+        });
+      } catch (revalError) {
+        console.warn('Could not revalidate sitemap:', revalError);
+      }
+
+      // Show result
+      if (failCount === 0) {
+        alert(`✅ Đã xuất bản thành công ${successCount} bài viết!`);
+      } else {
+        alert(`⚠️ Kết quả:\n- Thành công: ${successCount}\n- Thất bại: ${failCount}`);
+      }
+
+      // Reload articles
+      loadArticles();
+    } catch (error) {
+      console.error('Bulk publish error:', error);
+      alert('❌ Có lỗi xảy ra khi xuất bản bài viết!');
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   const isAllSelected = filteredArticles.length > 0 && selectedArticles.size === filteredArticles.length;
 
   return (
@@ -239,28 +304,54 @@ export default function AdminPage() {
             </button>
           </div>
 
-          {/* Bulk Delete Button */}
-          {selectedArticles.size > 0 && (
-            <button
-              onClick={handleBulkDelete}
-              disabled={isDeleting}
-              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isDeleting ? (
-                <>
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Đang xóa...
-                </>
-              ) : (
-                <>
-                  🗑️ Xóa {selectedArticles.size} bài viết
-                </>
-              )}
-            </button>
-          )}
+               {/* Action Buttons */}
+               <div className="flex gap-3">
+                 {/* Publish All Drafts Button */}
+                 {articles.filter(a => !a.published).length > 0 && (
+                   <button
+                     onClick={handlePublishAllDrafts}
+                     disabled={isPublishing}
+                     className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                   >
+                     {isPublishing ? (
+                       <>
+                         <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                         </svg>
+                         Đang xuất bản...
+                       </>
+                     ) : (
+                       <>
+                         ✅ Xuất bản {articles.filter(a => !a.published).length} bài nháp
+                       </>
+                     )}
+                   </button>
+                 )}
+
+                 {/* Bulk Delete Button */}
+                 {selectedArticles.size > 0 && (
+                   <button
+                     onClick={handleBulkDelete}
+                     disabled={isDeleting}
+                     className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                   >
+                     {isDeleting ? (
+                       <>
+                         <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                         </svg>
+                         Đang xóa...
+                       </>
+                     ) : (
+                       <>
+                         🗑️ Xóa {selectedArticles.size} bài viết
+                       </>
+                     )}
+                   </button>
+                 )}
+               </div>
         </div>
 
         {loading ? (
