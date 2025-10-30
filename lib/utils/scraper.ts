@@ -531,9 +531,10 @@ export async function extractMainImage(url: string, htmlContent?: string): Promi
       }
 
       // Try any large image as last resort
-      const largeImg = $('img').filter(function() {
-        const width = $(this).attr('width');
-        const height = $(this).attr('height');
+      const largeImg = $('img').filter((_idx, el) => {
+        const $el = $(el);
+        const width = $el.attr('width');
+        const height = $el.attr('height');
         return (!width || parseInt(width) > 400) && (!height || parseInt(height) > 300);
       }).first().attr('src');
       
