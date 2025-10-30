@@ -76,7 +76,7 @@ export default function AdminPage() {
   // Bulk selection handlers
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      const allIds = new Set(filteredArticles.map(a => a.id));
+      const allIds = new Set(filteredArticles.map(a => a.id).filter((id): id is string => id !== undefined));
       setSelectedArticles(allIds);
     } else {
       setSelectedArticles(new Set());
@@ -393,13 +393,15 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredArticles.map((article) => (
+                {filteredArticles.map((article) => {
+                  if (!article.id) return null;
+                  return (
                   <tr key={article.id} className={`hover:bg-gray-50 ${selectedArticles.has(article.id) ? 'bg-blue-50' : ''}`}>
                     <td className="px-6 py-4">
                       <input
                         type="checkbox"
-                        checked={selectedArticles.has(article.id)}
-                        onChange={() => handleSelectArticle(article.id)}
+                        checked={selectedArticles.has(article.id!)}
+                        onChange={() => handleSelectArticle(article.id!)}
                         className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
                         title="Chọn bài viết này"
                       />
@@ -432,7 +434,7 @@ export default function AdminPage() {
                       {article.views}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {format(new Date(article.created_at), 'dd/MM/yyyy', { locale: vi })}
+                      {article.created_at ? format(new Date(article.created_at), 'dd/MM/yyyy', { locale: vi }) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Link
@@ -449,14 +451,15 @@ export default function AdminPage() {
                         Sửa
                       </Link>
                       <button
-                        onClick={() => handleDelete(article.id, article.title)}
+                        onClick={() => article.id && handleDelete(article.id, article.title || 'Untitled')}
                         className="text-red-600 hover:text-red-900"
                       >
                         Xóa
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
 
