@@ -7,8 +7,32 @@ const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 }) : null;
 
-// Initialize Google AI (optional)
-const googleAI = process.env.GOOGLE_AI_API_KEY ? new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY) : null;
+// Helper function to get all available Google AI keys
+function getGoogleAIKeys(): string[] {
+  const keys: string[] = [];
+  let i = 1;
+  
+  // Check for numbered keys (GOOGLE_AI_API_KEY_1, GOOGLE_AI_API_KEY_2, ...)
+  while (true) {
+    const key = process.env[`GOOGLE_AI_API_KEY_${i}`];
+    if (key) {
+      keys.push(key);
+      i++;
+    } else {
+      break;
+    }
+  }
+  
+  // Fallback to single key if no numbered keys found
+  if (keys.length === 0 && process.env.GOOGLE_AI_API_KEY) {
+    keys.push(process.env.GOOGLE_AI_API_KEY);
+  }
+  
+  return keys;
+}
+
+// Round-robin index for key rotation (stored in memory)
+let currentKeyIndex = 0;
 
 // Clean up markdown output from AI (remove code fence wrappers)
 function cleanMarkdownOutput(content: string): string {
@@ -44,22 +68,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get all available Google AI keys
+    const googleApiKeys = getGoogleAIKeys();
+    
     // Check API keys
     console.log('🔑 API Keys Status:');
-    console.log('  - GOOGLE_AI_API_KEY:', process.env.GOOGLE_AI_API_KEY ? `SET (${process.env.GOOGLE_AI_API_KEY.substring(0, 10)}...)` : '❌ NOT SET');
+    console.log(`  - GOOGLE_AI_API_KEYs: ${googleApiKeys.length} keys available`);
+    if (googleApiKeys.length > 0) {
+      googleApiKeys.forEach((key, index) => {
+        console.log(`    • Key ${index + 1}: ${key.substring(0, 10)}...`);
+      });
+    }
     console.log('  - OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? 'SET' : 'NOT SET');
 
     // Check if any API key is configured
-    if (!process.env.OPENAI_API_KEY && !process.env.GOOGLE_AI_API_KEY) {
+    if (!process.env.OPENAI_API_KEY && googleApiKeys.length === 0) {
       console.log('❌ NO API KEY CONFIGURED!');
       return NextResponse.json(
-        { error: 'No AI API key configured. Please add OPENAI_API_KEY or GOOGLE_AI_API_KEY to environment variables.' },
+        { error: 'No AI API key configured. Please add OPENAI_API_KEY or GOOGLE_AI_API_KEY_1, GOOGLE_AI_API_KEY_2, ... to environment variables.' },
         { status: 500 }
       );
     }
 
-    // Determine which provider to use
+    // Determine which provider to use and select Google AI key with round-robin
     const actualProvider = provider === 'openai' && openai ? 'openai' : 'google';
+    let googleAI: GoogleGenerativeAI | null = null;
+    
+    if (actualProvider === 'google' && googleApiKeys.length > 0) {
+      // Use round-robin to rotate between keys
+      const selectedKey = googleApiKeys[currentKeyIndex % googleApiKeys.length];
+      const keyNumber = (currentKeyIndex % googleApiKeys.length) + 1;
+      console.log(`🔄 Using Google AI Key #${keyNumber} of ${googleApiKeys.length}`);
+      googleAI = new GoogleGenerativeAI(selectedKey);
+      currentKeyIndex++; // Rotate to next key for next request
+    }
 
     console.log('📊 Request Info:');
     console.log('  - Title:', title.substring(0, 50) + '...');
