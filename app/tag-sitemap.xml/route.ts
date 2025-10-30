@@ -42,17 +42,37 @@ export async function GET() {
         .replace(/-+/g, '-');
     };
 
-    // Generate XML
+    // Generate XML with error handling
     const urls = uniqueTags
       .map((tag) => {
-        const slug = generateTagSlug(tag);
-        return `  <url>
-    <loc>${baseUrl}/tag/${slug}</loc>
+        try {
+          const slug = generateTagSlug(tag);
+          
+          if (!slug) {
+            console.warn(`⚠️ Skipping empty tag: ${tag}`);
+            return '';
+          }
+          
+          const url = `${baseUrl}/tag/${slug}`;
+          const escapedUrl = escapeUrl(url);
+          
+          if (!escapedUrl) {
+            console.warn(`⚠️ Invalid URL for tag: ${tag}`);
+            return '';
+          }
+          
+          return `  <url>
+    <loc>${escapedUrl}</loc>
     <lastmod>${currentDate}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>`;
+        } catch (err: any) {
+          console.warn(`⚠️ Error processing tag ${tag}: ${err.message}`);
+          return '';
+        }
       })
+      .filter(Boolean)
       .join('\n');
 
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
@@ -68,8 +88,14 @@ ${urls}
         'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
       },
     });
-  } catch (error) {
-    console.error('❌ Error generating tag sitemap:', error);
+  } catch (error: any) {
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ ERROR GENERATING TAG SITEMAP');
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('Error Type:', error.constructor?.name);
+    console.error('Error Message:', error.message);
+    console.error('Error Stack:', error.stack);
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     // Return empty sitemap on error
     const emptySitemap = `<?xml version="1.0" encoding="UTF-8"?>
@@ -81,6 +107,26 @@ ${urls}
         'Content-Type': 'application/xml',
       },
     });
+  }
+}
+
+/**
+ * Escape URL for XML
+ */
+function escapeUrl(url: string): string {
+  if (!url) return '';
+  
+  try {
+    // Validate URL first
+    new URL(url);
+    return url
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  } catch {
+    return ''; // Invalid URL
   }
 }
 
