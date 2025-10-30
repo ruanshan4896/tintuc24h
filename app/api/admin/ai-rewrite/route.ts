@@ -309,13 +309,9 @@ TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
     if (actualProvider === 'google' && googleAI) {
       console.log('🟢 Using Google AI (Gemini)');
       
-      // Try different model names in order of preference (updated Oct 2024)
+      // Only gemini-2.0-flash-lite works with v1beta API (Oct 2025)
       const modelNames = [
-        'gemini-2.0-flash-lite',   // Latest, fastest, free (recommended)
-        'gemini-1.5-flash',        // Previous stable version
-        'gemini-1.5-pro',          // Pro version (may require billing)
-        'gemini-1.0-pro',          // Older stable version
-        'gemini-pro',              // Legacy fallback
+        'gemini-2.0-flash-lite',   // Only working model for free tier
       ];
       
       let result;
