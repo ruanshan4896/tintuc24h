@@ -12,13 +12,27 @@ export async function GET() {
 
   try {
     console.log('📰 Post Sitemap: Starting generation...');
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      baseUrl,
+    });
     
     // Get all published articles
     const articles = await getArticlesServer(true);
     console.log(`📰 Post Sitemap: Found ${articles.length} articles`);
     
-    if (articles.length === 0) {
+    if (!articles || articles.length === 0) {
       console.warn('⚠️ No articles found! Returning empty sitemap.');
+      const emptySitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`;
+      return new NextResponse(emptySitemap, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/xml',
+        },
+      });
     }
 
     // Generate XML
