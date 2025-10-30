@@ -410,14 +410,21 @@ export async function scrapeFullArticle(url: string): Promise<ScrapedArticle | n
     console.log('⚠️ Custom extractor failed, falling back to Readability...');
 
     // Method 2: Parse with linkedom + Readability
-    const { document } = parseHTML(html);
+    let article;
+    try {
+      const { document } = parseHTML(html);
 
-    // Use Readability to extract article
-    const reader = new Readability(document, {
-      charThreshold: 100, // Minimum content length
-    });
+      // Use Readability to extract article
+      const reader = new Readability(document, {
+        charThreshold: 100, // Minimum content length
+      });
 
-    const article = reader.parse();
+      article = reader.parse();
+    } catch (linkedomError: any) {
+      // linkedom might fail on Vercel serverless - log and return null
+      console.error('❌ linkedom failed (might be on Vercel):', linkedomError.message);
+      return null;
+    }
 
     if (!article) {
       console.error('❌ Readability also failed to parse article');
@@ -464,37 +471,78 @@ export async function extractMainImage(url: string, htmlContent?: string): Promi
       htmlContent = await response.text();
     }
 
-    const { document } = parseHTML(htmlContent);
+    try {
+      const { document } = parseHTML(htmlContent);
 
-    // Try Open Graph image first
-    const ogImage = document.querySelector('meta[property="og:image"]');
-    if (ogImage?.getAttribute('content')) {
-      return ogImage.getAttribute('content');
-    }
+      // Try Open Graph image first
+      const ogImage = document.querySelector('meta[property="og:image"]');
+      if (ogImage?.getAttribute('content')) {
+        return ogImage.getAttribute('content');
+      }
 
-    // Try Twitter card image
-    const twitterImage = document.querySelector('meta[name="twitter:image"]');
-    if (twitterImage?.getAttribute('content')) {
-      return twitterImage.getAttribute('content');
-    }
+      // Try Twitter card image
+      const twitterImage = document.querySelector('meta[name="twitter:image"]');
+      if (twitterImage?.getAttribute('content')) {
+        return twitterImage.getAttribute('content');
+      }
 
-    // Try article image
-    const articleImage = document.querySelector('article img, .article-content img, .post-content img');
-    if (articleImage?.getAttribute('src')) {
-      const imgSrc = articleImage.getAttribute('src')!;
-      // Convert relative URL to absolute
-      return new URL(imgSrc, url).href;
-    }
+      // Try article image
+      const articleImage = document.querySelector('article img, .article-content img, .post-content img');
+      if (articleImage?.getAttribute('src')) {
+        const imgSrc = articleImage.getAttribute('src')!;
+        // Convert relative URL to absolute
+        return new URL(imgSrc, url).href;
+      }
 
-    // Try any large image
-    const images = Array.from(document.querySelectorAll<HTMLImageElement>('img'));
-    for (const img of images) {
-      const src = img.getAttribute('src');
-      const width = img.getAttribute('width');
-      const height = img.getAttribute('height');
+      // Try any large image
+      const images = Array.from(document.querySelectorAll<HTMLImageElement>('img'));
+      for (const img of images) {
+        const src = img.getAttribute('src');
+        const width = img.getAttribute('width');
+        const height = img.getAttribute('height');
+        
+        if (src && (!width || parseInt(width) > 400) && (!height || parseInt(height) > 300)) {
+          return new URL(src, url).href;
+        }
+      }
+    } catch (linkedomError: any) {
+      // linkedom might fail on Vercel - fallback to cheerio
+      console.warn('⚠️ linkedom failed in extractMainImage, using cheerio:', linkedomError.message);
       
-      if (src && (!width || parseInt(width) > 400) && (!height || parseInt(height) > 300)) {
-        return new URL(src, url).href;
+      // Fallback with cheerio
+      const $ = cheerio.load(htmlContent);
+      
+      // Try Open Graph
+      const ogImage = $('meta[property="og:image"]').attr('content');
+      if (ogImage) return ogImage;
+      
+      // Try Twitter card
+      const twitterImage = $('meta[name="twitter:image"]').attr('content');
+      if (twitterImage) return twitterImage;
+      
+      // Try article image
+      const articleImage = $('article img, .article-content img, .post-content img').first().attr('src');
+      if (articleImage) {
+        try {
+          return new URL(articleImage, url).href;
+        } catch {
+          return articleImage;
+        }
+      }
+
+      // Try any large image as last resort
+      const largeImg = $('img').filter(function() {
+        const width = $(this).attr('width');
+        const height = $(this).attr('height');
+        return (!width || parseInt(width) > 400) && (!height || parseInt(height) > 300);
+      }).first().attr('src');
+      
+      if (largeImg) {
+        try {
+          return new URL(largeImg, url).href;
+        } catch {
+          return largeImg;
+        }
       }
     }
 
