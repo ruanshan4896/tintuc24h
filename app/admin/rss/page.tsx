@@ -20,7 +20,7 @@ export default function RssManagementPage() {
   const [aiRewrite, setAiRewrite] = useState(false);
   const [aiProvider, setAiProvider] = useState<'google' | 'openai'>('google');
 
-  const categories = ['Công nghệ', 'Thể thao', 'Sức khỏe', 'Ô tô', 'Giải trí'];
+  const categories = ['Công nghệ', 'Thể thao', 'Sức khỏe', 'Ô tô', 'Giải trí', 'Game'];
 
   useEffect(() => {
     fetchFeeds();

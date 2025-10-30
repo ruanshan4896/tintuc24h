@@ -68,6 +68,9 @@ export default function Header() {
               <Link href="/category/giai-tri" className="text-gray-700 hover:text-blue-600 transition">
                 Giải trí
               </Link>
+              <Link href="/category/game" className="text-gray-700 hover:text-blue-600 transition">
+                Game
+              </Link>
               
               {/* Search */}
               <form onSubmit={handleSearch} className="relative">
@@ -180,6 +183,13 @@ export default function Header() {
                 className="text-gray-700 hover:bg-blue-50 hover:text-blue-600 px-4 py-3 rounded-lg transition flex items-center"
               >
                 🎬 Giải trí
+              </Link>
+              <Link
+                href="/category/game"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-gray-700 hover:bg-blue-50 hover:text-blue-600 px-4 py-3 rounded-lg transition flex items-center"
+              >
+                🎮 Game
               </Link>
             </div>
 
