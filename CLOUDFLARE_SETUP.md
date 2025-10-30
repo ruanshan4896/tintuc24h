@@ -1,37 +1,98 @@
 # CLOUDFLARE SETUP - TĂNG PAGESPEED MIỄN PHÍ
 
-## 🎯 Mục tiêu
-- **PageSpeed Mobile:** 85 → **95+**
-- **LCP:** 2.5s → **1.5s**
-- **FCP:** 1.8s → **0.8s**
+## ⚠️ **QUAN TRỌNG: YÊU CẦU CUSTOM DOMAIN**
+
+**Vercel subdomain (`.vercel.app`) KHÔNG THỂ dùng Cloudflare CDN!**
+
+**Lý do:**
+- Bạn không sở hữu domain `vercel.app`
+- Không thể thay đổi nameservers
+- Cloudflare chỉ hoạt động với custom domain
+
+**GIẢI PHÁP:**
+- **Option 1:** Mua custom domain ($10-15/năm) → Dùng Cloudflare (khuyến nghị)
+- **Option 2:** Tối ưu code (đã làm) → PageSpeed 88-90 điểm
 
 ---
 
-## 📋 BƯỚC 1: TẠO TÀI KHOẢN CLOUDFLARE
+## 🎯 Mục tiêu (với custom domain)
+- **PageSpeed Mobile:** 85 → **95+**
+- **LCP:** 2.5s → **1.2s**
+- **FCP:** 1.8s → **0.6s**
+
+---
+
+## 📋 BƯỚC 1: MUA CUSTOM DOMAIN
+
+**Khuyến nghị:**
+- **Cloudflare Registrar:** Rẻ nhất, tích hợp sẵn
+- **Namecheap:** Dễ dùng, giá tốt
+- **GoDaddy:** Phổ biến
+
+**Giá tham khảo:**
+- `.com`: $10-15/năm
+- `.xyz`: $5/năm
+- `.vn`: $15-20/năm
+
+**Ví dụ domain:** `tintuc24h.com`, `tintuc24h.xyz`
+
+---
+
+## 📋 BƯỚC 2: TẠO TÀI KHOẢN CLOUDFLARE
 
 1. Truy cập: https://dash.cloudflare.com/sign-up
 2. Đăng ký với email (MIỄN PHÍ)
-3. Add site: `tintuc24h-seven.vercel.app` (hoặc custom domain)
+3. Add site: `tintuc24h.com` (custom domain của bạn)
 
 ---
 
-## 📋 BƯỚC 2: CẤU HÌNH DNS
+## 📋 BƯỚC 3: UPDATE NAMESERVERS
 
-**Nếu dùng custom domain:**
+**Tại nhà đăng ký domain (Namecheap, GoDaddy...):**
 
-1. Vào Cloudflare Dashboard → DNS
-2. Add các DNS records từ domain provider
-3. Update nameservers về Cloudflare
-
-**Nếu dùng Vercel domain:**
-
-Vercel đã có CDN, nhưng bạn có thể:
-- Dùng Cloudflare Workers (miễn phí 100k requests/day)
-- Hoặc chuyển sang custom domain để dùng Cloudflare CDN
+1. Đăng nhập vào tài khoản domain
+2. Vào **Domain Management** → **Nameservers**
+3. Chọn **Custom DNS**
+4. Nhập nameservers từ Cloudflare:
+   ```
+   ns1.cloudflare.com
+   ns2.cloudflare.com
+   ```
+5. **Save** và chờ 24h để propagate
 
 ---
 
-## 📋 BƯỚC 3: BẬT OPTIMIZATION
+## 📋 BƯỚC 4: CONNECT VERCEL VỚI CUSTOM DOMAIN
+
+1. **Vào Vercel Dashboard:**
+   - Chọn project `tintuc24h`
+   - Vào **Settings** → **Domains**
+
+2. **Add domain:**
+   ```
+   tintuc24h.com
+   www.tintuc24h.com
+   ```
+
+3. **Vercel sẽ cung cấp DNS records:**
+   ```
+   Type: CNAME
+   Name: @
+   Value: cname.vercel-dns.com
+   
+   Type: CNAME
+   Name: www
+   Value: cname.vercel-dns.com
+   ```
+
+4. **Add records vào Cloudflare:**
+   - Vào Cloudflare → DNS → Add Record
+   - Copy từng record từ Vercel
+   - **QUAN TRỌNG:** Bật "Proxy" (cloud màu cam) cho mỗi record
+
+---
+
+## 📋 BƯỚC 5: BẬT OPTIMIZATION TRÊN CLOUDFLARE
 
 ### Speed → Optimization
 
@@ -72,11 +133,11 @@ Vercel đã có CDN, nhưng bạn có thể:
 
 ---
 
-## 📋 BƯỚC 4: PAGE RULES (MIỄN PHÍ 3 RULES)
+## 📋 BƯỚC 6: PAGE RULES (MIỄN PHÍ 3 RULES)
 
 **Rule 1: Cache Everything**
 ```
-URL: *tintuc24h-seven.vercel.app/*
+URL: *tintuc24h.com/*
 Settings:
   - Cache Level: Cache Everything
   - Edge Cache TTL: 2 hours
@@ -85,7 +146,7 @@ Settings:
 
 **Rule 2: Image Optimization**
 ```
-URL: *tintuc24h-seven.vercel.app/_next/image*
+URL: *tintuc24h.com/_next/image*
 Settings:
   - Cache Level: Cache Everything
   - Edge Cache TTL: 1 month
@@ -94,16 +155,18 @@ Settings:
 
 **Rule 3: Static Assets**
 ```
-URL: *tintuc24h-seven.vercel.app/_next/static/*
+URL: *tintuc24h.com/_next/static/*
 Settings:
   - Cache Level: Cache Everything
   - Edge Cache TTL: 1 year
   - Browser Cache TTL: 1 year
 ```
 
+*Thay `tintuc24h.com` bằng custom domain của bạn*
+
 ---
 
-## 📋 BƯỚC 5: CLOUDFLARE WORKERS (OPTIONAL)
+## 📋 BƯỚC 7: CLOUDFLARE WORKERS (OPTIONAL - NÂNG CAO)
 
 **Tạo worker để optimize thêm:**
 
