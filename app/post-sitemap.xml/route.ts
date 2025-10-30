@@ -41,11 +41,18 @@ export async function GET() {
       .map((article) => {
         try {
           const lastmod = new Date(article.updated_at || article.created_at || Date.now()).toISOString();
-          const imageUrl = article.image_url || `${baseUrl}/og-image.jpg`;
+          const imageUrl = escapeUrl(article.image_url || `${baseUrl}/og-image.jpg`);
           const title = escapeXml(article.title || 'Untitled');
+          const slug = article.slug || '';
+          
+          // Skip if essential data is missing
+          if (!imageUrl || !slug) {
+            console.warn(`⚠️ Skipping article ${article.id}: missing URL or slug`);
+            return '';
+          }
           
           return `  <url>
-    <loc>${baseUrl}/articles/${article.slug}</loc>
+    <loc>${escapeUrl(`${baseUrl}/articles/${slug}`)}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -103,11 +110,34 @@ ${urls}
  * Escape XML special characters
  */
 function escapeXml(text: string): string {
-  return text
+  if (!text) return '';
+  
+  return String(text)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
+    .replace(/'/g, '&apos;')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ''); // Remove control characters
+}
+
+/**
+ * Escape URL for XML
+ */
+function escapeUrl(url: string): string {
+  if (!url) return '';
+  
+  try {
+    // Validate URL first
+    new URL(url);
+    return url
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  } catch {
+    return ''; // Invalid URL
+  }
 }
 
