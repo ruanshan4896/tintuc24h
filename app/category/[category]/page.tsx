@@ -18,6 +18,7 @@ const categoryBackgrounds: { [key: string]: string } = {
   'suc-khoe': 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=1920&q=80', // Health
   'o-to': 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1920&q=80', // Cars
   'giai-tri': 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1920&q=80', // Entertainment
+  'game': 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1920&q=80', // Gaming
 };
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
@@ -47,6 +48,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     'suc-khoe': 'Sức khỏe',
     'o-to': 'Ô tô',
     'giai-tri': 'Giải trí',
+    'game': 'Game',
   };
   
   const categoryDisplayName = categoryMap[categorySlug] || categoryName;

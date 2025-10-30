@@ -562,6 +562,21 @@ export async function POST(request: NextRequest) {
       .update({ last_fetched: new Date().toISOString() })
       .eq('id', feedId);
 
+    // Revalidate sitemap if new articles were created
+    if (result.newArticles > 0) {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+        await fetch(`${baseUrl}/api/admin/revalidate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: '/post-sitemap.xml' }),
+        });
+        console.log('✅ Sitemap revalidated after RSS fetch');
+      } catch (revalError) {
+        console.warn('⚠️ Could not revalidate sitemap:', revalError);
+      }
+    }
+
     result.success = true;
 
     return NextResponse.json(result);

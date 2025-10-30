@@ -16,6 +16,7 @@ export const CATEGORIES = [
   'Sức khỏe',
   'Ô tô',
   'Giải trí',
+  'Game',
 ] as const;
 
 export const DEFAULT_CATEGORY = 'Công nghệ';

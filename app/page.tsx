@@ -23,6 +23,7 @@ const categoryIcons: Record<string, string> = {
   'Sức khỏe': '❤️',
   'Ô tô': '🚗',
   'Giải trí': '🎬',
+  'Game': '🎮',
 };
 
 // Category slug mapping
@@ -32,6 +33,7 @@ const categorySlugMap: Record<string, string> = {
   'Sức khỏe': 'suc-khoe',
   'Ô tô': 'o-to',
   'Giải trí': 'giai-tri',
+  'Game': 'game',
 };
 
 export default async function HomePage() {
