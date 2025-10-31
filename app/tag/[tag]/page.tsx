@@ -31,20 +31,46 @@ export async function generateMetadata({ params }: TagPageProps): Promise<Metada
     // Display name: convert slug back to readable format
     const tagDisplay = tagSlug.replace(/-/g, ' ');
     
+    // Get article count to decide indexing
+    const articles = await getArticlesByTagServer(tagSlug, true);
+    const articleCount = articles.length;
+    
+    // SEO Best Practice: 
+    // - Index if tag has >= 5 articles (valuable for users)
+    // - Noindex if tag has < 5 articles (thin content)
+    const shouldIndex = articleCount >= 5;
+    
     return {
       title: `Tag: ${tagDisplay} - TinTức`,
-      description: `Tất cả bài viết được gắn tag "${tagDisplay}"`,
+      description: `Tất cả bài viết được gắn tag "${tagDisplay}". Tìm thấy ${articleCount} bài viết.`,
       alternates: {
         canonical: `/tag/${tagSlug}`,
       },
       openGraph: {
         url: `/tag/${tagSlug}`,
+        title: `Tag: ${tagDisplay} - TinTức`,
+        description: `${articleCount} bài viết về ${tagDisplay}`,
+      },
+      robots: {
+        index: shouldIndex,
+        follow: true,
+        googleBot: {
+          index: shouldIndex,
+          follow: true,
+          'max-video-preview': -1,
+          'max-image-preview': 'large',
+          'max-snippet': -1,
+        },
       },
     };
   } catch (error) {
     return {
       title: 'Tag - TinTức',
       description: 'Bài viết theo tag',
+      robots: {
+        index: false,
+        follow: true,
+      },
     };
   }
 }

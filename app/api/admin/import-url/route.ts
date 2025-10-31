@@ -498,8 +498,18 @@ export async function POST(request: NextRequest) {
     // Generate temporary ID for new article (use slug as identifier)
     const tempArticleId = 'temp-' + Date.now();
     
-    // Add keyword links to content (use AI-generated tags as keywords)
-    finalContent = await addKeywordLinks(finalContent, title, tempArticleId, aiTags);
+    // Auto Keyword Linking: Add 3 fixed links (homepage, category, self)
+    console.log('🔗 Adding fixed keyword links (homepage, category, self)...');
+    
+    // Add keyword links to content (3 fixed links)
+    finalContent = await addKeywordLinks(
+      finalContent, 
+      title, 
+      slug, // Use slug as identifier
+      aiTags, 
+      category || 'Công nghệ', // Pass category
+      slug // Pass article slug
+    );
 
     // Prepare article data - GIỐNG HỆT RSS FETCH
     const articleData = {

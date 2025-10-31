@@ -571,14 +571,18 @@ export async function POST(request: NextRequest) {
         // Remove any remaining placeholders (if any)
         finalContent = finalContent.replace(/\[IMAGE_PLACEHOLDER_\d+\]/g, '');
 
-        // Auto Keyword Linking: Add internal links to related articles
-        console.log('🔗 Adding keyword links...');
-        // Generate temporary ID for new article (use slug as identifier)
-        // Note: We'll do a post-process after article is created
-        const tempArticleId = 'temp-' + Date.now();
+        // Auto Keyword Linking: Add 3 fixed links (homepage, category, self)
+        console.log('🔗 Adding fixed keyword links (homepage, category, self)...');
         
-        // Add keyword links to content (use AI-generated tags as keywords)
-        finalContent = await addKeywordLinks(finalContent, title, tempArticleId, aiTags);
+        // Add keyword links to content (3 fixed links)
+        finalContent = await addKeywordLinks(
+          finalContent, 
+          title, 
+          slug, // Use slug as identifier
+          aiTags, 
+          feed.category, // Pass category
+          slug // Pass article slug
+        );
 
         // Create article
         const { data: article, error: articleError } = await supabaseAdmin
