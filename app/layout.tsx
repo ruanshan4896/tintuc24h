@@ -129,7 +129,7 @@ export default function RootLayout({
           `
         }} />
       </head>
-      <body className={`${inter.className} bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100`} suppressHydrationWarning>
+      <body className={`${inter.className} bg-gradient-to-br from-gray-100 via-blue-50 to-indigo-50 min-h-screen`} suppressHydrationWarning>
         <div className="flex flex-col min-h-screen">
           <Header />
           <main className="flex-grow" id="main-content">

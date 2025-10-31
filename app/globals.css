@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Global background gradient */
+body {
+  background: linear-gradient(to bottom right, #f3f4f6, #dbeafe, #e0e7ff) !important;
+  background-attachment: fixed;
+}
+
 /* Hide scrollbar for slider */
 .scrollbar-hide {
   -ms-overflow-style: none;
