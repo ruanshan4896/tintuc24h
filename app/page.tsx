@@ -96,23 +96,25 @@ export default async function HomePage() {
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Featured Article - Modern Card */}
+        {/* Magazine Style Layout */}
+        
+        {/* Featured Section - Magazine Hero */}
         {featuredArticle && (
-          <section className="mb-16">
+          <section className="mb-12">
             <div className="flex items-center gap-3 mb-6">
               <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full text-sm font-bold shadow-lg">
                 <TrendingUp className="w-4 h-4" />
-                HOT NHẤT
+                TIN NỔI BẬT
               </div>
               <div className="h-0.5 flex-1 bg-gradient-to-r from-orange-500 to-transparent"></div>
             </div>
             
             <Link href={`/articles/${featuredArticle.slug}`}>
-              <div className="group relative bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden">
-                <div className="grid md:grid-cols-2 gap-0">
-                  {/* Image */}
+              <article className="group relative bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-xl transition-all duration-300">
+                <div className="grid lg:grid-cols-3 gap-0">
+                  {/* Large Featured Image */}
                   {featuredArticle.image_url && (
-                    <div className="relative h-56 md:h-80 overflow-hidden">
+                    <div className="lg:col-span-2 relative h-64 lg:h-96 overflow-hidden">
                       <Image
                         src={featuredArticle.image_url}
                         alt={featuredArticle.title}
@@ -121,49 +123,220 @@ export default async function HomePage() {
                         priority
                         fetchPriority="high"
                         quality={75}
-                        sizes="(max-width: 768px) 100vw, 50vw"
+                        sizes="(max-width: 1024px) 100vw, 66vw"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                      
+                      {/* Overlay Content */}
+                      <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-8 text-white">
+                        <span className="inline-block px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded mb-3">
+                          {featuredArticle.category}
+                        </span>
+                        <h2 className="text-2xl lg:text-4xl font-bold mb-3 leading-tight line-clamp-3">
+                          {featuredArticle.title}
+                        </h2>
+                        <p className="text-sm lg:text-base text-gray-200 line-clamp-2 mb-2">
+                          {featuredArticle.description}
+                        </p>
+                        <div className="flex items-center gap-3 text-xs text-gray-300">
+                          <span>{featuredArticle.author}</span>
+                          <span>•</span>
+                          <span>{featuredArticle.views} lượt xem</span>
+                        </div>
+                      </div>
                     </div>
                   )}
                   
-                  {/* Content */}
-                  <div className="p-8 md:p-12 flex flex-col justify-center">
-                    <div className="flex items-center gap-3 mb-4">
-                      <span className="px-4 py-1.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-bold rounded-full">
-                        {featuredArticle.category}
-                      </span>
-                      <span className="text-gray-500 text-sm">
-                        {featuredArticle.views} lượt xem
-                      </span>
-                    </div>
-                    
-                    <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 leading-tight group-hover:text-blue-600 transition-colors">
-                      {featuredArticle.title}
-                    </h2>
-                    
-                    <p className="text-gray-600 text-lg mb-6 line-clamp-3 leading-relaxed">
-                      {featuredArticle.description}
-                    </p>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
-                        {featuredArticle.author[0]}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">{featuredArticle.author}</p>
-                        <p className="text-sm text-gray-500">Tác giả</p>
-                      </div>
+                  {/* Sidebar Articles */}
+                  <div className="lg:col-span-1 p-4 lg:p-6 bg-gray-50 border-l border-gray-200">
+                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">MỚI NHẤT</h3>
+                    <div className="space-y-4">
+                      {articles
+                        .filter(a => a.id !== featuredArticle.id)
+                        .slice(0, 4)
+                        .map((article) => (
+                          <Link
+                            key={article.id}
+                            href={`/articles/${article.slug}`}
+                            className="group/article block hover:bg-white rounded-lg p-2 transition-colors"
+                          >
+                            <div className="flex gap-3">
+                              {article.image_url && (
+                                <div className="relative w-20 h-20 flex-shrink-0 rounded overflow-hidden">
+                                  <Image
+                                    src={article.image_url}
+                                    alt={article.title}
+                                    fill
+                                    className="object-cover group-hover/article:scale-105 transition-transform"
+                                    sizes="80px"
+                                  />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-xs font-semibold text-gray-900 group-hover/article:text-blue-600 transition-colors line-clamp-2 mb-1">
+                                  {article.title}
+                                </h4>
+                                <span className="text-xs text-gray-500">{article.category}</span>
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
                     </div>
                   </div>
                 </div>
-              </div>
+              </article>
             </Link>
           </section>
         )}
 
-        {/* Category Sliders */}
-        {CATEGORIES.map((category) => {
+        {/* Magazine Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+          {/* Left Column - Large Articles */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Category Sections */}
+            {CATEGORIES.slice(0, 3).map((category) => {
+              const categoryArticles = articlesByCategory[category];
+              if (!categoryArticles || categoryArticles.length === 0) return null;
+              
+              return (
+                <section key={category} className="border-b border-gray-200 pb-8 last:border-b-0 last:pb-0">
+                  <div className="flex items-center justify-between mb-4">
+                    <Link href={`/category/${categorySlugMap[category]}`} className="flex items-center gap-2 group">
+                      <span className="text-2xl">{categoryIcons[category]}</span>
+                      <h2 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                        {category}
+                      </h2>
+                    </Link>
+                    <Link 
+                      href={`/category/${categorySlugMap[category]}`}
+                      className="text-sm text-gray-500 hover:text-blue-600 transition-colors"
+                    >
+                      Xem tất cả →
+                    </Link>
+                  </div>
+                  
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {categoryArticles.slice(0, 4).map((article, idx) => (
+                      <Link
+                        key={article.id}
+                        href={`/articles/${article.slug}`}
+                        className={`group block ${
+                          idx === 0 ? 'md:col-span-2' : ''
+                        }`}
+                      >
+                        <article className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300">
+                          {article.image_url && (
+                            <div className={`relative overflow-hidden ${
+                              idx === 0 ? 'h-64' : 'h-40'
+                            }`}>
+                              <Image
+                                src={article.image_url}
+                                alt={article.title}
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                sizes={idx === 0 ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 100vw, 33vw"}
+                              />
+                            </div>
+                          )}
+                          <div className="p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-semibold rounded">
+                                {article.category}
+                              </span>
+                              <span className="text-xs text-gray-500">{article.views} lượt xem</span>
+                            </div>
+                            <h3 className={`font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 ${
+                              idx === 0 ? 'text-xl' : 'text-base'
+                            }`}>
+                              {article.title}
+                            </h3>
+                            {idx === 0 && article.description && (
+                              <p className="text-sm text-gray-600 line-clamp-2 mt-2">
+                                {article.description}
+                              </p>
+                            )}
+                          </div>
+                        </article>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+
+          {/* Right Sidebar - Popular & Trending */}
+          <aside className="lg:col-span-1 space-y-6">
+            {/* Popular Articles */}
+            <section className="bg-white border border-gray-200 rounded-lg p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-4 pb-3 border-b border-gray-200">
+                📊 Đọc nhiều
+              </h2>
+              <div className="space-y-4">
+                {articles
+                  .sort((a, b) => b.views - a.views)
+                  .slice(0, 5)
+                  .map((article, idx) => (
+                    <Link
+                      key={article.id}
+                      href={`/articles/${article.slug}`}
+                      className="group flex gap-3 hover:bg-gray-50 rounded-lg p-2 transition-colors"
+                    >
+                      <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm">
+                        {idx + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
+                          {article.title}
+                        </h3>
+                        <span className="text-xs text-gray-500">{article.category}</span>
+                      </div>
+                    </Link>
+                  ))}
+              </div>
+            </section>
+
+            {/* Recent Articles */}
+            <section className="bg-white border border-gray-200 rounded-lg p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-4 pb-3 border-b border-gray-200">
+                🕐 Mới nhất
+              </h2>
+              <div className="space-y-4">
+                {articles
+                  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                  .slice(0, 5)
+                  .map((article) => (
+                    <Link
+                      key={article.id}
+                      href={`/articles/${article.slug}`}
+                      className="group block"
+                    >
+                      {article.image_url && (
+                        <div className="relative w-full h-32 mb-2 rounded-lg overflow-hidden">
+                          <Image
+                            src={article.image_url}
+                            alt={article.title}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            sizes="(max-width: 1024px) 0vw, 320px"
+                          />
+                        </div>
+                      )}
+                      <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 mb-1">
+                        {article.title}
+                      </h3>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <span className="px-2 py-0.5 bg-gray-100 rounded">{article.category}</span>
+                      </div>
+                    </Link>
+                  ))}
+              </div>
+            </section>
+          </aside>
+        </div>
+
+        {/* Remaining Category Sliders */}
+        {CATEGORIES.slice(3).map((category) => {
           const categoryArticles = articlesByCategory[category];
           if (!categoryArticles || categoryArticles.length === 0) return null;
           
