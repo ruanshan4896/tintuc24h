@@ -187,6 +187,58 @@ export default async function HomePage() {
           </section>
         )}
 
+        {/* Trending Articles Section - Fill empty space below featured */}
+        {featuredArticle && articles.length > 1 && (
+          <section className="mb-12">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-sm font-bold shadow-lg">
+                <TrendingUp className="w-4 h-4" />
+                XU HƯỚNG
+              </div>
+              <div className="h-0.5 flex-1 bg-gradient-to-r from-pink-500 to-transparent"></div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {articles
+                .filter(a => a.id !== featuredArticle.id)
+                .sort((a, b) => b.views - a.views)
+                .slice(0, 4)
+                .map((article) => (
+                  <Link
+                    key={article.id}
+                    href={`/articles/${article.slug}`}
+                    className="group block"
+                  >
+                    <article className="bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-xl overflow-hidden hover:shadow-xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 shadow-md h-full">
+                      {article.image_url && (
+                        <div className="relative h-40 overflow-hidden">
+                          <Image
+                            src={article.image_url}
+                            alt={article.title}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                          />
+                        </div>
+                      )}
+                      <div className="p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-semibold rounded">
+                            {article.category}
+                          </span>
+                          <span className="text-xs text-gray-500">{article.views} lượt xem</span>
+                        </div>
+                        <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 text-sm">
+                          {article.title}
+                        </h3>
+                      </div>
+                    </article>
+                  </Link>
+                ))}
+            </div>
+          </section>
+        )}
+
         {/* Magazine Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
           {/* Left Column - Large Articles */}
