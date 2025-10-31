@@ -28,9 +28,25 @@ export default function AdminPage() {
 
   async function loadArticles() {
     setLoading(true);
-    const data = await getArticlesForAdmin(); // ✅ Optimized query - only essential fields
-    setArticles(data);
-    setLoading(false);
+    try {
+      // Use server-side API instead of direct client query (bypasses RLS)
+      const response = await fetch('/api/admin/articles?limit=500');
+      if (response.ok) {
+        const result = await response.json();
+        setArticles(result.articles || []);
+      } else {
+        const error = await response.json();
+        console.error('Error loading articles:', error);
+        alert(`Lỗi: ${error.error || 'Không thể tải danh sách bài viết'}`);
+        setArticles([]);
+      }
+    } catch (error: any) {
+      console.error('Exception loading articles:', error);
+      alert('Lỗi kết nối! Vui lòng thử lại.');
+      setArticles([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleDelete(id: string, title: string) {

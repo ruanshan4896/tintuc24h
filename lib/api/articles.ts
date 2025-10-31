@@ -7,49 +7,53 @@ import { Article, CreateArticleInput, UpdateArticleInput } from '@/lib/types/art
  * @returns Array of articles with limited fields for fast loading
  */
 export async function getArticlesForAdmin(published?: boolean): Promise<Partial<Article>[]> {
-  // Check if Supabase is properly configured
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    console.error('❌ SUPABASE NOT CONFIGURED!');
-    return [];
-  }
+  try {
+    // Check if Supabase is properly configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      console.error('❌ SUPABASE NOT CONFIGURED!');
+      return [];
+    }
 
-  console.log('🔍 Fetching articles for admin...');
+    console.log('🔍 Fetching articles for admin...');
 
-  // Only select fields needed for admin list view (NOT content!)
-  const query = supabase
-    .from('articles')
-    .select('id, title, slug, category, published, views, created_at')
-    .order('created_at', { ascending: false })
-    .limit(500); // Limit to last 500 articles for performance
+    // Build query step by step
+    let query = supabase
+      .from('articles')
+      .select('id, title, slug, category, published, views, created_at')
+      .order('created_at', { ascending: false })
+      .limit(500); // Limit to last 500 articles for performance
 
-  if (published !== undefined) {
-    query.eq('published', published);
-  }
+    if (published !== undefined) {
+      query = query.eq('published', published);
+    }
 
-  const { data, error } = await query;
+    const { data, error } = await query;
 
-  console.log('📊 Query result:', {
-    dataCount: data?.length || 0,
-    hasError: !!error,
-    errorDetails: error ? {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code
-    } : null
-  });
+    if (error) {
+      console.error('❌ Error fetching articles:', {
+        message: error.message || 'Unknown error',
+        details: error.details || 'No details',
+        hint: error.hint || 'No hint',
+        code: error.code || 'No code'
+      });
+      console.error('Full error object:', JSON.stringify(error, null, 2));
+      return [];
+    }
 
-  if (error) {
-    console.error('❌ Error fetching articles:', {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code
+    console.log('📊 Query result:', {
+      dataCount: data?.length || 0,
+      hasError: false
+    });
+
+    return (data || []) as Partial<Article>[];
+  } catch (err: any) {
+    console.error('❌ Exception in getArticlesForAdmin:', {
+      message: err?.message || 'Unknown exception',
+      stack: err?.stack,
+      name: err?.name
     });
     return [];
   }
-
-  return data as Partial<Article>[];
 }
 
 /**

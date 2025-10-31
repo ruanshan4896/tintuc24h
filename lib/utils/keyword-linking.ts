@@ -861,30 +861,150 @@ function addFixedLinks(
 }
 
 /**
- * Find articles by tags/keywords for auto-linking
+ * Extract keywords from content using AI (better than just tags)
  */
-async function findArticlesByTags(
-  tags: string[],
-  excludeSlug?: string,
-  limit: number = 10
-): Promise<Array<{ slug: string; title: string; keywords: string[] }>> {
+async function extractKeywordsFromContent(content: string, title: string): Promise<string[]> {
   try {
-    const { supabaseAdmin } = await import('@/lib/supabase/server');
-    
-    if (!tags || tags.length === 0) {
+    // Get Google AI keys
+    function getGoogleAIKeys(): string[] {
+      const keys: string[] = [];
+      let i = 1;
+      while (true) {
+        const key = process.env[`GOOGLE_AI_API_KEY_${i}`];
+        if (key) {
+          keys.push(key);
+          i++;
+        } else {
+          break;
+        }
+      }
+      if (keys.length === 0 && process.env.GOOGLE_AI_API_KEY) {
+        keys.push(process.env.GOOGLE_AI_API_KEY);
+      }
+      return keys;
+    }
+
+    const googleApiKeys = getGoogleAIKeys();
+    if (googleApiKeys.length === 0) {
       return [];
     }
 
-    // Get all published articles
+    // Get content snippet (first 1000 chars)
+    const contentSnippet = content.substring(0, 1000).replace(/#|!\[|\[|\]|\(|\)/g, ' ').trim();
+
+    const prompt = `Phân tích nội dung bài viết và trích xuất 5-8 từ khóa chính (keywords) quan trọng nhất.
+
+Tiêu đề: "${title}"
+
+Đoạn đầu nội dung:
+"${contentSnippet}"
+
+YÊU CẦU:
+- Trích xuất 5-8 từ khóa chính (keywords) là danh từ, tên riêng, thuật ngữ quan trọng trong bài viết
+- Từ khóa phải có ý nghĩa, dài ít nhất 2 từ (ví dụ: "iPhone 15", "VinFast VF 7", "Cristiano Ronaldo")
+- Không bao gồm các từ chung chung như "tin tức", "bài viết", "người dùng"
+- Ưu tiên tên riêng, sản phẩm, sự kiện, nhân vật
+
+Format trả về (mỗi từ khóa một dòng, KHÔNG đánh số):
+KEYWORD_1
+KEYWORD_2
+KEYWORD_3
+...
+
+VÍ DỤ:
+Tiêu đề: "iPhone 15 Ra Mắt Với Chip A17 Pro Mạnh Mẽ"
+KEYWORD_1: iPhone 15
+KEYWORD_2: Chip A17 Pro
+KEYWORD_3: Apple
+KEYWORD_4: smartphone
+
+Tiêu đề: "VinFast VF 7 Hoàn Thành Hành Trình 50.000km"
+KEYWORD_1: VinFast VF 7
+KEYWORD_2: xe điện
+KEYWORD_3: Việt Nam
+
+Trả về NGAY theo format (KHÔNG giải thích):`;
+
+    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+    
+    let response;
+    let lastError;
+    
+    for (let keyIndex = 0; keyIndex < googleApiKeys.length; keyIndex++) {
+      const selectedKey = googleApiKeys[keyIndex];
+      const keyNumber = keyIndex + 1;
+      
+      try {
+        const genAI = new GoogleGenerativeAI(selectedKey);
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
+        
+        const result = await model.generateContent(prompt);
+        response = result.response.text().trim();
+        
+        console.log(`✅ Extracted keywords with Key #${keyNumber}`);
+        break;
+        
+      } catch (error: any) {
+        const isQuotaError = error.message?.includes('429') || 
+                             error.message?.includes('quota') ||
+                             error.message?.includes('Too Many Requests');
+        
+        if (isQuotaError) {
+          console.log(`⚠️ Key #${keyNumber} quota exceeded, trying next key...`);
+          lastError = error;
+          continue;
+        } else {
+          throw error;
+        }
+      }
+    }
+    
+    if (!response) {
+      throw lastError || new Error('All Google AI keys quota exceeded');
+    }
+
+    // Parse keywords (one per line)
+    const keywords = response
+      .split('\n')
+      .map(line => line.replace(/^KEYWORD_\d+:\s*/i, '').trim())
+      .filter(k => k.length > 2 && !k.match(/^(KEYWORD|VÍ DỤ|YÊU CẦU)/i))
+      .slice(0, 8);
+
+    console.log(`🔑 Extracted ${keywords.length} keywords from content:`, keywords);
+    return keywords;
+  } catch (error: any) {
+    console.error('❌ Error extracting keywords:', error.message);
+    return [];
+  }
+}
+
+/**
+ * Get random articles from same category
+ */
+async function getRandomCategoryArticles(
+  category: string,
+  excludeSlug: string,
+  count: number = 2
+): Promise<Array<{ slug: string; title: string }>> {
+  try {
+    const { supabaseAdmin } = await import('@/lib/supabase/server');
+    
+    if (!category) {
+      return [];
+    }
+
+    // Get articles from same category
     const { data: articles, error } = await supabaseAdmin
       .from('articles')
-      .select('slug, title, tags')
+      .select('slug, title')
       .eq('published', true)
+      .eq('category', category)
+      .neq('slug', excludeSlug)
       .order('created_at', { ascending: false })
-      .limit(limit * 3); // Get more to filter
+      .limit(count * 5); // Get more to randomize
 
     if (error) {
-      console.error('❌ Error finding articles by tags:', error);
+      console.error('❌ Error finding category articles:', error);
       return [];
     }
 
@@ -892,56 +1012,34 @@ async function findArticlesByTags(
       return [];
     }
 
-    // Filter articles that have matching tags and exclude current article
-    const matchingArticles = articles
-      .filter(article => {
-        if (excludeSlug && article.slug === excludeSlug) return false;
-        if (!article.tags || article.tags.length === 0) return false;
-        
-        // Check if article has any matching tag
-        const hasMatchingTag = tags.some(tag => 
-          article.tags.some((articleTag: string) => 
-            articleTag.toLowerCase() === tag.toLowerCase() ||
-            articleTag.toLowerCase().includes(tag.toLowerCase()) ||
-            tag.toLowerCase().includes(articleTag.toLowerCase())
-          )
-        );
-        
-        return hasMatchingTag;
-      })
-      .slice(0, limit)
-      .map(article => ({
-        slug: article.slug,
-        title: article.title,
-        keywords: article.tags || []
-      }));
+    // Randomize and select
+    const shuffled = [...articles].sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, count);
 
-    console.log(`📚 Found ${matchingArticles.length} related articles by tags`);
-    return matchingArticles;
+    console.log(`📚 Found ${selected.length} random articles from category "${category}"`);
+    return selected;
   } catch (error) {
-    console.error('❌ Error in findArticlesByTags:', error);
+    console.error('❌ Error in getRandomCategoryArticles:', error);
     return [];
   }
 }
 
 /**
- * Add keyword links to content based on tags
- * Links keywords from tags to related articles
+ * Add "Xem thêm" blocks to content
+ * Inserts 2 blocks with random articles from same category
  */
-function addTagLinks(
+function addRelatedArticleBlocks(
   content: string,
-  tags: string[],
-  relatedArticles: Array<{ slug: string; title: string; keywords: string[] }>,
-  excludeSlug: string
+  relatedArticles: Array<{ slug: string; title: string }>
 ): string {
-  if (!tags || tags.length === 0 || !relatedArticles || relatedArticles.length === 0) {
+  if (!relatedArticles || relatedArticles.length === 0) {
     return content;
   }
 
   const lines = content.split('\n');
-  let linksAdded = 0;
-  const maxLinksPerArticle = 3; // Max links to add from tags
-  const linksUsed = new Set<string>(); // Track which articles already linked
+  let blocksAdded = 0;
+  const maxBlocks = 2;
+  const minDistance = 8; // Minimum paragraphs between blocks
 
   // Helper: Check if line is a valid paragraph
   const isValidParagraph = (line: string, minLength = 30): boolean => {
@@ -951,52 +1049,85 @@ function addTagLinks(
            !trimmed.startsWith('```') &&
            !trimmed.startsWith('![') &&
            !trimmed.startsWith('*') &&
-           !trimmed.includes('](/articles/') && // Don't link if already linked
+           !trimmed.includes('Xem thêm:') && // Don't insert if already has block
+           !trimmed.includes('](/articles/') &&
            !trimmed.includes('](/category/') &&
            !trimmed.includes('](/');
   };
 
-  // Process each tag
-  for (const tag of tags.slice(0, 5)) { // Limit to first 5 tags
-    if (linksAdded >= maxLinksPerArticle) break;
-    
-    // Find related article for this tag
-    const relatedArticle = relatedArticles.find(article => 
-      article.keywords.some(keyword => 
-        keyword.toLowerCase() === tag.toLowerCase() ||
-        keyword.toLowerCase().includes(tag.toLowerCase()) ||
-        tag.toLowerCase().includes(keyword.toLowerCase())
-      ) && !linksUsed.has(article.slug)
-    );
+  // Find suitable positions (middle sections of article)
+  const validPositions: number[] = [];
+  const contentLength = lines.length;
+  
+  // First block: around 30-40% of content
+  const firstBlockStart = Math.floor(contentLength * 0.3);
+  const firstBlockEnd = Math.floor(contentLength * 0.4);
+  
+  // Second block: around 60-70% of content
+  const secondBlockStart = Math.floor(contentLength * 0.6);
+  const secondBlockEnd = Math.floor(contentLength * 0.7);
 
-    if (!relatedArticle) continue;
+  // Collect valid positions for first block
+  for (let i = firstBlockStart; i < firstBlockEnd && i < contentLength; i++) {
+    if (isValidParagraph(lines[i], 40)) {
+      validPositions.push(i);
+    }
+  }
 
-    const tagLower = tag.toLowerCase();
-    const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const tagEscaped = escapeRegex(tag);
+  // Collect valid positions for second block
+  for (let i = secondBlockStart; i < secondBlockEnd && i < contentLength; i++) {
+    if (isValidParagraph(lines[i], 40)) {
+      validPositions.push(i);
+    }
+  }
+
+  // Insert blocks
+  const insertedIndices: number[] = [];
+  
+  for (let blockIndex = 0; blockIndex < Math.min(maxBlocks, relatedArticles.length) && blockIndex < validPositions.length; blockIndex++) {
+    const article = relatedArticles[blockIndex];
     
-    // Try to find and link the keyword in content
-    for (let i = 0; i < lines.length && linksAdded < maxLinksPerArticle; i++) {
-      if (isValidParagraph(lines[i], 40)) {
-        const line = lines[i];
-        
-        // Check if line contains the tag as a whole word and not already linked
-        const regex = new RegExp(`\\b(${tagEscaped})\\b`, 'i');
-        if (regex.test(line) && !line.includes('](/articles/')) {
-          // Check if this keyword appears naturally (not in markdown syntax)
-          const beforeMatch = line.substring(0, line.search(regex));
-          const isInMarkdownLink = /\[.*?\]\(.*?\)/.test(beforeMatch + line.substring(line.search(regex)));
-          
-          if (!isInMarkdownLink) {
-            lines[i] = line.replace(
-              regex,
-              `[$1](/articles/${relatedArticle.slug})`
-            );
-            linksUsed.add(relatedArticle.slug);
-            linksAdded++;
-            console.log(`✅ Added tag link: "${tag}" → /articles/${relatedArticle.slug}`);
-            break; // Only link first occurrence of each tag
-          }
+    // Find position that's far enough from previous insertions
+    let insertIndex = -1;
+    for (const pos of validPositions) {
+      if (insertedIndices.length === 0) {
+        // First block - use first valid position
+        insertIndex = pos;
+        break;
+      } else {
+        // Check distance from previous insertions
+        const farEnough = insertedIndices.every(prevIndex => Math.abs(pos - prevIndex) >= minDistance);
+        if (farEnough && pos > insertedIndices[insertedIndices.length - 1]) {
+          insertIndex = pos;
+          break;
+        }
+      }
+    }
+
+    // Fallback: use middle positions
+    if (insertIndex === -1) {
+      if (blockIndex === 0) {
+        insertIndex = Math.floor(contentLength * 0.35);
+      } else {
+        insertIndex = Math.floor(contentLength * 0.65);
+      }
+    }
+
+    if (insertIndex >= 0 && insertIndex < contentLength) {
+      // Create "Xem thêm" block
+      const blockMarkdown = `\n\n> **Xem thêm:** [${article.title}](/articles/${article.slug})\n\n`;
+      
+      // Insert after this paragraph
+      lines.splice(insertIndex + 1, 0, blockMarkdown);
+      insertedIndices.push(insertIndex);
+      blocksAdded++;
+      
+      console.log(`✅ Added "Xem thêm" block #${blockIndex + 1} after paragraph ${insertIndex + 1}: "${article.title}"`);
+      
+      // Adjust subsequent positions (account for inserted lines)
+      for (let j = blockIndex + 1; j < insertedIndices.length; j++) {
+        if (insertedIndices[j] > insertIndex) {
+          insertedIndices[j] += 1; // +1 for the inserted block
         }
       }
     }
@@ -1006,8 +1137,8 @@ function addTagLinks(
 }
 
 /**
- * Main function: Add automatic keyword links to article content
- * Combines: Fixed links (homepage, category, self) + Tag-based links
+ * Main function: Add internal linking to article content
+ * Now uses: Fixed links (homepage, category, self) + "Xem thêm" blocks
  * @param content - Original markdown content
  * @param title - Article title
  * @param articleId - Current article ID (or slug)
@@ -1025,14 +1156,13 @@ export async function addKeywordLinks(
   articleSlug?: string
 ): Promise<string> {
   try {
-    console.log('🔗 Adding keyword links (fixed + tag-based)...');
+    console.log('🔗 Adding internal links (fixed links + "Xem thêm" blocks)...');
 
     // Get main keyword for self-link (simple extraction)
     const mainKeyword = getMainKeyword(title, tags);
     
     console.log(`📝 Main keyword: "${mainKeyword}"`);
     console.log(`📁 Category: "${category || 'N/A'}"`);
-    console.log(`🏷️ Tags: ${tags.length > 0 ? tags.join(', ') : 'None'}`);
     console.log(`🔗 Article slug: "${articleSlug || articleId}"`);
 
     // Convert category to slug
@@ -1053,33 +1183,26 @@ export async function addKeywordLinks(
     
     console.log(`✅ Added ${fixedLinksCount} fixed links (homepage, category, self)`);
 
-    // Step 2: Add tag-based links (find related articles and link keywords)
-    let tagLinksCount = 0;
-    if (tags && tags.length > 0) {
-      console.log('🔗 Finding related articles by tags...');
-      const relatedArticles = await findArticlesByTags(tags, finalArticleSlug, 10);
+    // Step 2: Add "Xem thêm" blocks with random articles from same category
+    if (category && content.length > 300) { // Only if content is substantial
+      console.log('📚 Getting random articles from same category...');
+      
+      const relatedArticles = await getRandomCategoryArticles(
+        category,
+        finalArticleSlug,
+        2 // Get 2 random articles
+      );
       
       if (relatedArticles.length > 0) {
-        const beforeTagLinks = modifiedContent;
-        modifiedContent = addTagLinks(
+        modifiedContent = addRelatedArticleBlocks(
           modifiedContent,
-          tags,
-          relatedArticles,
-          finalArticleSlug
+          relatedArticles
         );
-        
-        // Count tag links added
-        tagLinksCount = (modifiedContent.match(/\[.+?\]\([\/\w-]+\)/g) || []).length - 
-                        (beforeTagLinks.match(/\[.+?\]\([\/\w-]+\)/g) || []).length;
-        
-        console.log(`✅ Added ${tagLinksCount} tag-based links`);
+        console.log(`✅ Added ${relatedArticles.length} "Xem thêm" blocks`);
       } else {
-        console.log('⚠️ No related articles found for tags');
+        console.log('⚠️ No related articles found in same category');
       }
     }
-
-    const totalLinksAdded = fixedLinksCount + tagLinksCount;
-    console.log(`🔗 Total links added: ${totalLinksAdded} (${fixedLinksCount} fixed + ${tagLinksCount} tag-based)`);
 
     return modifiedContent;
   } catch (error) {
