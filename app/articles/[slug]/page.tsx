@@ -141,7 +141,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       
-      <article className="bg-white">
+      <article className="bg-transparent">
         {/* Breadcrumb */}
         <Breadcrumb
           items={[
@@ -285,7 +285,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
             {/* Fixed Sidebar - Related Articles (Desktop Only) */}
             <aside className="hidden lg:block w-80 flex-shrink-0 sticky top-24 self-start">
-              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+              <div className="bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-xl p-6 shadow-lg">
                 <h2 className="text-xl font-bold text-gray-900 mb-4 pb-3 border-b border-gray-200">
                   📰 Bài viết liên quan
                 </h2>

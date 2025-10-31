@@ -12,7 +12,7 @@ interface ArticleCardSliderProps {
 
 export default function ArticleCardSlider({ article, priority = false }: ArticleCardSliderProps) {
   return (
-    <article className="group bg-white rounded-xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden h-full flex flex-col" suppressHydrationWarning>
+    <article className="group bg-white/90 backdrop-blur-sm rounded-xl shadow-lg hover:shadow-2xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 overflow-hidden h-full flex flex-col border border-gray-200/50" suppressHydrationWarning>
       <Link href={`/articles/${article.slug}`} className="flex flex-col h-full" prefetch={false} suppressHydrationWarning>
         {/* Image */}
         {article.image_url && (

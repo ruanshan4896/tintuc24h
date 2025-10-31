@@ -13,7 +13,7 @@ interface ArticleCardProps {
 
 export default function ArticleCard({ article }: ArticleCardProps) {
   return (
-    <article className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
+    <article className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg overflow-hidden hover:shadow-2xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 border border-gray-200/50">
       <Link href={`/articles/${article.slug}`}>
         {article.image_url && (
           <div className="relative h-48 w-full">

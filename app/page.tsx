@@ -51,7 +51,7 @@ export default async function HomePage() {
   const featuredArticle = [...articles].sort((a, b) => b.views - a.views)[0];
 
   return (
-    <div className="bg-gradient-to-b from-gray-50 to-white min-h-screen" suppressHydrationWarning>
+    <div className="min-h-screen" suppressHydrationWarning>
       {/* Modern Hero Section */}
       <section className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-purple-800 text-white overflow-hidden">
         {/* Simple gradient background for better performance */}
@@ -109,7 +109,7 @@ export default async function HomePage() {
               <div className="h-0.5 flex-1 bg-gradient-to-r from-orange-500 to-transparent"></div>
             </div>
             
-            <article className="group relative bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-xl transition-all duration-300">
+              <article className="group relative bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-xl overflow-hidden hover:shadow-2xl transition-all duration-300 shadow-lg">
               <div className="grid lg:grid-cols-3 gap-0">
                 {/* Large Featured Image - Clickable */}
                 {featuredArticle.image_url && (
@@ -157,7 +157,7 @@ export default async function HomePage() {
                         <Link
                           key={article.id}
                           href={`/articles/${article.slug}`}
-                          className="group/article block hover:bg-white rounded-lg p-2 transition-colors"
+                          className="group/article block hover:bg-white/50 rounded-lg p-2 transition-colors backdrop-blur-sm"
                         >
                           <div className="flex gap-3">
                             {article.image_url && (
@@ -222,7 +222,7 @@ export default async function HomePage() {
                           idx === 0 ? 'md:col-span-2' : ''
                         }`}
                       >
-                        <article className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300">
+                        <article className="bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-xl overflow-hidden hover:shadow-xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 shadow-md">
                           {article.image_url && (
                             <div className={`relative overflow-hidden ${
                               idx === 0 ? 'h-64' : 'h-40'
@@ -266,7 +266,7 @@ export default async function HomePage() {
           {/* Right Sidebar - Popular & Trending */}
           <aside className="lg:col-span-1 space-y-6">
             {/* Popular Articles */}
-            <section className="bg-white border border-gray-200 rounded-lg p-6">
+            <section className="bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-xl p-6 shadow-lg">
               <h2 className="text-lg font-bold text-gray-900 mb-4 pb-3 border-b border-gray-200">
                 📊 Đọc nhiều
               </h2>
@@ -295,7 +295,7 @@ export default async function HomePage() {
             </section>
 
             {/* Recent Articles */}
-            <section className="bg-white border border-gray-200 rounded-lg p-6">
+            <section className="bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-xl p-6 shadow-lg">
               <h2 className="text-lg font-bold text-gray-900 mb-4 pb-3 border-b border-gray-200">
                 🕐 Mới nhất
               </h2>

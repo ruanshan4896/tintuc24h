@@ -56,7 +56,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const backgroundImage = categoryBackgrounds[categorySlug] || categoryBackgrounds['cong-nghe'];
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="min-h-screen">
       {/* Breadcrumb */}
       <Breadcrumb
         items={[
@@ -104,7 +104,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
             {/* Featured Article - First Article as Hero */}
             {articles[0] && (
               <section className="mb-12">
-                <article className="group relative bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-xl transition-all duration-300">
+                <article className="group relative bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-xl overflow-hidden hover:shadow-2xl transition-all duration-300 shadow-lg">
                   <div className="grid lg:grid-cols-3 gap-0">
                     {/* Large Featured Image - Clickable */}
                     {articles[0].image_url && (
@@ -187,7 +187,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                     href={`/articles/${article.slug}`}
                     className="group block"
                   >
-                    <article className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300 h-full">
+                    <article className="bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-xl overflow-hidden hover:shadow-xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 h-full shadow-md">
                       {article.image_url && (
                         <div className={`relative overflow-hidden ${
                           idx % 5 === 0 ? 'h-64' : 'h-48'
