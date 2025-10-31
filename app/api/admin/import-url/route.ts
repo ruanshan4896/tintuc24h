@@ -255,12 +255,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Scrape article from URL
+    // Scrape article from URL - GIỐNG HỆT RSS FETCH
     console.log('🔍 Scraping article from URL...');
     
     let scrapedData;
     try {
-      scrapedData = await scrapeFullArticle(url, scrapeFullContent);
+      scrapedData = await scrapeFullArticle(url);
     } catch (error: any) {
       console.error('❌ Scraping error:', error);
       return NextResponse.json(
@@ -278,58 +278,110 @@ export async function POST(request: NextRequest) {
 
     let title = decodeHtmlEntities(scrapedData.title);
     let content = scrapedData.content;
-    const imageUrl = scrapedData.imageUrl || await extractMainImage(url);
+    
+    // Try to get image from scraping, fallback to extractMainImage
+    let imageUrl: string | null = null;
+    try {
+      imageUrl = await extractMainImage(url);
+    } catch (error: any) {
+      console.warn('⚠️ Could not extract image:', error.message);
+    }
 
     console.log(`✅ Scraped: "${title.substring(0, 50)}..." (${content.length} chars)`);
 
-    // Generate description from content if not provided
-    let description = scrapedData.description || content.substring(0, 160).replace(/\n/g, ' ').trim() + '...';
+    // Generate description from excerpt or content (sẽ được override bởi AI nếu có)
+    let description = scrapedData.excerpt || content.substring(0, 160).replace(/\n/g, ' ').trim() + '...';
     if (description.length > 200) {
       description = description.substring(0, 197) + '...';
     }
 
-    // AI Rewrite if enabled
+    // AI Rewrite if enabled - GIỐNG HỆT RSS FETCH
+    let finalContent = content;
+    let finalDescription = description.substring(0, 500);
     let aiTags: string[] = [];
+    
+    console.log('🔍 Checking AI Rewrite conditions:');
+    console.log('  - aiRewrite flag:', aiRewrite);
+    console.log('  - content.length:', content.length);
+    console.log('  - Should rewrite?', aiRewrite && content.length > 200);
+    
     if (aiRewrite && content.length > 200) {
-      console.log('🤖 Starting AI rewrite...');
-      
       try {
-        const rewriteRes = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/admin/ai-rewrite`, {
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`🤖 AI REWRITE: ${title.substring(0, 50)}...`);
+        console.log(`📊 Content length: ${content.length} chars`);
+        console.log(`🎯 Provider: ${aiProvider}`);
+        console.log('🚀 Calling AI Rewrite API...');
+        
+        const apiUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/admin/ai-rewrite`;
+        console.log('📡 API URL:', apiUrl);
+        
+        const rewriteRes = await fetch(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            content,
             title,
+            content,
             tone: 'professional',
             provider: aiProvider,
-            generateMetadata: true, // Generate SEO title, desc, tags
+            generateMetadata: true, // AI tạo title + description + tags
           }),
         });
 
+        console.log('📥 Response status:', rewriteRes.status);
+
         if (rewriteRes.ok) {
           const rewriteData = await rewriteRes.json();
+          console.log('📦 Response data:', rewriteData);
           
-          if (rewriteData.content) {
-            content = rewriteData.content;
-            console.log(`✅ AI Rewrite completed (${content.length} chars)`);
+          if (rewriteData.rewrittenContent) {
+            finalContent = rewriteData.rewrittenContent;
             
-            // Extract metadata if provided
+            // Use AI-generated SEO metadata
             if (rewriteData.seoTitle) {
               title = rewriteData.seoTitle;
+              console.log(`📝 Using AI-generated SEO Title: ${title}`);
             }
+            
             if (rewriteData.seoDescription) {
-              description = rewriteData.seoDescription;
+              finalDescription = rewriteData.seoDescription;
+              console.log(`📝 Using AI-generated SEO Description: ${finalDescription}`);
+            } else {
+              // Fallback: Extract from content
+              finalDescription = finalContent.substring(0, 155).replace(/[#*]/g, '').trim();
             }
-            if (rewriteData.tags && Array.isArray(rewriteData.tags)) {
+            
+            // Use AI-generated tags
+            if (rewriteData.tags && Array.isArray(rewriteData.tags) && rewriteData.tags.length > 0) {
               aiTags = rewriteData.tags;
+              console.log(`🏷️ Using AI-generated tags:`, aiTags);
             }
+            
+            console.log(`✅ AI Rewrite SUCCESS!`);
+            console.log(`  - Tokens: ${rewriteData.tokensUsed}`);
+            console.log(`  - Cost: ${rewriteData.cost}`);
+            console.log(`  - Original: ${content.length} chars`);
+            console.log(`  - Rewritten: ${finalContent.length} chars`);
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          } else {
+            console.warn('⚠️ No rewritten content in response');
           }
         } else {
+          const errorText = await rewriteRes.text();
+          console.error('❌ AI Rewrite HTTP error:', rewriteRes.status);
+          console.error('Error response:', errorText);
           console.warn('⚠️ AI Rewrite failed, using original content');
         }
-      } catch (error: any) {
-        console.warn('⚠️ AI Rewrite error:', error.message);
+      } catch (aiError: any) {
+        console.error('❌ AI Rewrite exception:', aiError);
+        console.error('Error details:', {
+          message: aiError.message,
+          stack: aiError.stack,
+        });
+        console.warn('⚠️ Using original content due to error');
       }
+    } else {
+      console.log('⏭️ Skipping AI Rewrite (disabled or content too short)');
     }
 
     // Generate slug
@@ -351,45 +403,53 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Process image if available
-    let finalContent = content;
+    // Use scraped image if available (NO Unsplash!) - GIỐNG HỆT RSS FETCH
     if (imageUrl) {
       console.log(`🖼️ Using scraped image: ${imageUrl}`);
       
+      // Generate AI caption & alt for scraped image
       const { caption, alt } = await generateImageCaptionAndAlt(title);
       
-      // Replace IMAGE_PLACEHOLDER_1 if exists, or insert after first heading
+      // Replace IMAGE_PLACEHOLDER_1 with scraped image
       if (finalContent.includes('[IMAGE_PLACEHOLDER_1]')) {
         const imageMarkdown = `\n\n![${alt}](${imageUrl})\n*${caption}*\n`;
         finalContent = finalContent.replace('[IMAGE_PLACEHOLDER_1]', imageMarkdown);
+        console.log(`✅ Replaced [IMAGE_PLACEHOLDER_1] with scraped image + AI caption & alt`);
       } else {
-        // Insert after first heading
+        // If no placeholder, insert after first heading
         const firstHeadingMatch = finalContent.match(/^##\s.+$/m);
         if (firstHeadingMatch) {
-          const headingIndex = firstHeadingMatch.index! + firstHeadingMatch[0].length;
-          const imageMarkdown = `\n\n![${alt}](${imageUrl})\n*${caption}*\n\n`;
-          finalContent = finalContent.slice(0, headingIndex) + imageMarkdown + finalContent.slice(headingIndex);
+          const insertPosition = firstHeadingMatch.index! + firstHeadingMatch[0].length;
+          const imageMarkdown = `\n\n![${alt}](${imageUrl})\n*${caption}*\n`;
+          finalContent = finalContent.slice(0, insertPosition) + imageMarkdown + finalContent.slice(insertPosition);
+          console.log(`✅ Inserted scraped image after first heading + AI caption & alt`);
         }
       }
-      
-      // Remove any remaining placeholders
-      finalContent = finalContent.replace(/\[IMAGE_PLACEHOLDER_\d+\]/g, '');
+    } else {
+      console.warn('⚠️ No image available from scraping');
     }
 
-    // Add keyword links
+    // Remove any remaining placeholders (if any)
+    finalContent = finalContent.replace(/\[IMAGE_PLACEHOLDER_\d+\]/g, '');
+
+    // Auto Keyword Linking: Add internal links to related articles - GIỐNG HỆT RSS FETCH
+    console.log('🔗 Adding keyword links...');
+    // Generate temporary ID for new article (use slug as identifier)
     const tempArticleId = 'temp-' + Date.now();
+    
+    // Add keyword links to content (use AI-generated tags as keywords)
     finalContent = await addKeywordLinks(finalContent, title, tempArticleId, aiTags);
 
-    // Prepare article data
+    // Prepare article data - GIỐNG HỆT RSS FETCH
     const articleData = {
       title,
       slug,
-      description,
-      content: finalContent,
+      description: finalDescription, // Use AI-generated description if available
+      content: finalContent, // Use AI-rewritten content if available
       image_url: imageUrl,
       category: category || 'Công nghệ',
-      author: 'Ctrl Z',
-      tags: aiTags.length > 0 ? aiTags : [],
+      author: 'Ctrl Z', // Fixed author
+      tags: aiTags.length > 0 ? aiTags : [], // Use AI-generated tags
     };
 
     // If preview mode, return article data without saving
