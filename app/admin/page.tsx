@@ -228,7 +228,7 @@ export default function AdminPage() {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-4">
               <Link href="/" className="text-2xl font-bold text-blue-600">
-                📰 TinTức
+                📰 Ctrl Z
               </Link>
               <span className="text-gray-300">|</span>
               <span className="text-gray-600 font-medium">Admin Panel</span>
@@ -254,6 +254,12 @@ export default function AdminPage() {
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-4xl font-bold text-gray-900">Quản lý bài viết</h1>
             <div className="flex gap-3">
+              <Link
+                href="/admin/import-url"
+                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
+              >
+                🔗 Import từ URL
+              </Link>
               <Link
                 href="/admin/rss"
                 className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-semibold"
