@@ -147,39 +147,51 @@ export default async function HomePage() {
                 )}
                 
                 {/* Sidebar Articles */}
-                <div className="lg:col-span-1 p-4 lg:p-6 bg-gray-50 border-l border-gray-200">
+                <div className="lg:col-span-1 p-4 lg:p-6 bg-gray-50/80 backdrop-blur-sm border-l border-gray-200/50 flex flex-col">
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">MỚI NHẤT</h3>
-                  <div className="space-y-4">
-                    {articles
-                      .filter(a => a.id !== featuredArticle.id)
-                      .slice(0, 4)
-                      .map((article) => (
-                        <Link
-                          key={article.id}
-                          href={`/articles/${article.slug}`}
-                          className="group/article block hover:bg-white/50 rounded-lg p-2 transition-colors backdrop-blur-sm"
-                        >
-                          <div className="flex gap-3">
-                            {article.image_url && (
-                              <div className="relative w-20 h-20 flex-shrink-0 rounded overflow-hidden">
-                                <Image
-                                  src={article.image_url}
-                                  alt={article.title}
-                                  fill
-                                  className="object-cover group-hover/article:scale-105 transition-transform"
-                                  sizes="80px"
-                                />
+                  <div className="space-y-3 flex-1">
+                    {(() => {
+                      const sidebarArticles = articles
+                        .filter(a => a.id !== featuredArticle.id)
+                        .slice(0, 4);
+                      
+                      // Fill with empty placeholders if less than 4 articles
+                      while (sidebarArticles.length < 4) {
+                        sidebarArticles.push(null as any);
+                      }
+                      
+                      return sidebarArticles.map((article, idx) => (
+                        article ? (
+                          <Link
+                            key={article.id}
+                            href={`/articles/${article.slug}`}
+                            className="group/article block hover:bg-white/50 rounded-lg p-2 transition-colors backdrop-blur-sm"
+                          >
+                            <div className="flex gap-3">
+                              {article.image_url && (
+                                <div className="relative w-20 h-20 flex-shrink-0 rounded overflow-hidden">
+                                  <Image
+                                    src={article.image_url}
+                                    alt={article.title}
+                                    fill
+                                    className="object-cover group-hover/article:scale-105 transition-transform"
+                                    sizes="80px"
+                                  />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-xs font-semibold text-gray-900 group-hover/article:text-blue-600 transition-colors line-clamp-2 mb-1">
+                                  {article.title}
+                                </h4>
+                                <span className="text-xs text-gray-500">{article.category}</span>
                               </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <h4 className="text-xs font-semibold text-gray-900 group-hover/article:text-blue-600 transition-colors line-clamp-2 mb-1">
-                                {article.title}
-                              </h4>
-                              <span className="text-xs text-gray-500">{article.category}</span>
                             </div>
-                          </div>
-                        </Link>
-                      ))}
+                          </Link>
+                        ) : (
+                          <div key={`placeholder-${idx}`} className="h-24 bg-gray-100/50 rounded-lg animate-pulse"></div>
+                        )
+                      ));
+                    })()}
                   </div>
                 </div>
               </div>
@@ -188,22 +200,24 @@ export default async function HomePage() {
         )}
 
         {/* Trending Articles Section - Fill empty space below featured */}
-        {featuredArticle && articles.length > 1 && (
-          <section className="mb-12">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-sm font-bold shadow-lg">
-                <TrendingUp className="w-4 h-4" />
-                XU HƯỚNG
+        {(() => {
+          const trendingArticles = articles
+            .filter(a => featuredArticle ? a.id !== featuredArticle.id : true)
+            .sort((a, b) => b.views - a.views)
+            .slice(0, 4);
+          
+          return trendingArticles.length > 0 ? (
+            <section className="mb-12">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-sm font-bold shadow-lg">
+                  <TrendingUp className="w-4 h-4" />
+                  XU HƯỚNG
+                </div>
+                <div className="h-0.5 flex-1 bg-gradient-to-r from-pink-500 to-transparent"></div>
               </div>
-              <div className="h-0.5 flex-1 bg-gradient-to-r from-pink-500 to-transparent"></div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {articles
-                .filter(a => a.id !== featuredArticle.id)
-                .sort((a, b) => b.views - a.views)
-                .slice(0, 4)
-                .map((article) => (
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {trendingArticles.map((article) => (
                   <Link
                     key={article.id}
                     href={`/articles/${article.slug}`}
@@ -235,9 +249,10 @@ export default async function HomePage() {
                     </article>
                   </Link>
                 ))}
-            </div>
-          </section>
-        )}
+              </div>
+            </section>
+          ) : null;
+        })()}
 
         {/* Magazine Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
