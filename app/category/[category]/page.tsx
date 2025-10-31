@@ -113,7 +113,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                           src={articles[0].image_url}
                           alt={articles[0].title}
                           fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-500"
+                          className="object-cover transition-transform duration-500"
                           priority
                           quality={75}
                           sizes="(max-width: 1024px) 100vw, 66vw"
@@ -157,7 +157,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                                     src={article.image_url}
                                     alt={article.title}
                                     fill
-                                    className="object-cover group-hover/article:scale-105 transition-transform"
+                                    className="object-cover transition-transform"
                                     sizes="80px"
                                   />
                                 </div>
@@ -196,7 +196,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                             src={article.image_url}
                             alt={article.title}
                             fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="object-cover transition-transform duration-300"
                             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                           />
                         </div>

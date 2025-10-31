@@ -303,7 +303,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                             src={relatedArticle.image_url}
                             alt={relatedArticle.title}
                             fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="object-cover transition-transform duration-300"
                             sizes="(max-width: 1024px) 0vw, 320px"
                           />
                         </div>
