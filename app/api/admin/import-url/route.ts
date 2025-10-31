@@ -428,38 +428,64 @@ export async function POST(request: NextRequest) {
         imageMarkdowns.push(`\n\n![${alt}](${imgUrl})\n*${caption}*\n`);
       }
 
-      // Replace placeholders or insert images
-      let placeholderCount = 0;
-      for (let i = 0; i < imageMarkdowns.length; i++) {
-        const placeholder = `[IMAGE_PLACEHOLDER_${i + 1}]`;
-        if (finalContent.includes(placeholder)) {
-          finalContent = finalContent.replace(placeholder, imageMarkdowns[i]);
-          placeholderCount++;
-          console.log(`✅ Replaced ${placeholder} with image ${i + 1}`);
-        }
-      }
-
-      // If no placeholders, insert images after headings
-      if (placeholderCount === 0 && imageMarkdowns.length > 0) {
-        // Insert first image after first heading
-        const firstHeadingMatch = finalContent.match(/^##\s.+$/m);
-        if (firstHeadingMatch) {
-          const insertPosition = firstHeadingMatch.index! + firstHeadingMatch[0].length;
-          finalContent = finalContent.slice(0, insertPosition) + imageMarkdowns[0] + finalContent.slice(insertPosition);
-          console.log(`✅ Inserted first image after first heading`);
-        }
-
-        // Insert remaining images after subsequent headings (if available)
-        if (imageMarkdowns.length > 1) {
-          const headingMatches = Array.from(finalContent.matchAll(/^##\s.+$/gm));
-          for (let i = 1; i < imageMarkdowns.length && i < headingMatches.length; i++) {
-            const headingMatch = headingMatches[i];
-            const insertPosition = headingMatch.index! + headingMatch[0].length;
-            finalContent = finalContent.slice(0, insertPosition) + imageMarkdowns[i] + finalContent.slice(insertPosition);
-            console.log(`✅ Inserted image ${i + 1} after heading ${i + 1}`);
+          // Replace placeholders or insert images
+          let placeholderCount = 0;
+          for (let i = 0; i < imageMarkdowns.length; i++) {
+            const placeholder = `[IMAGE_PLACEHOLDER_${i + 1}]`;
+            if (finalContent.includes(placeholder)) {
+              finalContent = finalContent.replace(placeholder, imageMarkdowns[i]);
+              placeholderCount++;
+              console.log(`✅ Replaced ${placeholder} with image ${i + 1}`);
+            }
           }
-        }
-      }
+
+          // If no placeholders, insert images strategically
+          if (placeholderCount === 0 && imageMarkdowns.length > 0) {
+            // Strategy 1: Insert after headings (preferred)
+            const headingMatches = Array.from(finalContent.matchAll(/^##\s.+$/gm));
+            
+            if (headingMatches.length > 0) {
+              // Insert images from end to start to avoid index shifting
+              const imagesToInsert = [...imageMarkdowns];
+              let contentOffset = 0;
+              
+              // Distribute images evenly across headings
+              const insertPositions: number[] = [];
+              const maxInserts = Math.min(imagesToInsert.length, headingMatches.length);
+              
+              for (let i = 0; i < maxInserts; i++) {
+                const headingIndex = Math.floor((headingMatches.length - 1) * i / Math.max(1, maxInserts - 1));
+                insertPositions.push(headingIndex);
+              }
+              
+              // Insert from end to start (reverse order)
+              for (let idx = insertPositions.length - 1; idx >= 0; idx--) {
+                const headingIdx = insertPositions[idx];
+                const heading = headingMatches[headingIdx];
+                const insertPos = heading.index! + heading[0].length + contentOffset;
+                finalContent = finalContent.slice(0, insertPos) + imagesToInsert[idx] + finalContent.slice(insertPos);
+                contentOffset += imagesToInsert[idx].length;
+                console.log(`✅ Inserted image ${idx + 1} after heading ${headingIdx + 1}`);
+              }
+            } else {
+              // Strategy 2: No headings - insert images between paragraphs
+              const paragraphs = finalContent.split(/\n\n/);
+              
+              // Distribute images evenly throughout content
+              const interval = Math.max(1, Math.floor(paragraphs.length / (imageMarkdowns.length + 1)));
+              
+              // Insert from end to start to avoid index shifting
+              for (let i = imageMarkdowns.length - 1; i >= 0; i--) {
+                const insertIndex = interval * (i + 1);
+                if (insertIndex < paragraphs.length) {
+                  paragraphs[insertIndex] = imageMarkdowns[i] + '\n\n' + paragraphs[insertIndex];
+                  console.log(`✅ Inserted image ${i + 1} between paragraphs at position ${insertIndex}`);
+                }
+              }
+              
+              finalContent = paragraphs.join('\n\n');
+            }
+          }
     } else {
       console.warn('⚠️ No images available from scraping');
     }

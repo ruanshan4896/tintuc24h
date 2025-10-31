@@ -99,106 +99,26 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Magazine Style Layout */}
+        {/* Masonry Layout */}
         {articles.length > 0 ? (
-          <>
-            {/* Featured Article - First Article as Hero */}
-            {articles[0] && (
-              <section className="mb-12">
-                <article className={`group relative ${getCardBgClasses(articles[0].id)} border border-gray-200/50 rounded-xl overflow-hidden hover:shadow-2xl transition-all duration-300 shadow-lg`}>
-                  <div className="grid lg:grid-cols-3 gap-0">
-                    {/* Large Featured Image - Clickable */}
-                    {articles[0].image_url && (
-                      <Link href={`/articles/${articles[0].slug}`} className="lg:col-span-2 relative h-64 lg:h-96 overflow-hidden block">
-                        <Image
-                          src={articles[0].image_url}
-                          alt={articles[0].title}
-                          fill
-                          className="object-cover transition-transform duration-500"
-                          priority
-                          quality={75}
-                          sizes="(max-width: 1024px) 100vw, 66vw"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                        
-                        {/* Overlay Content */}
-                        <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-8 text-white">
-                          <span className="inline-block px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded mb-3">
-                            {articles[0].category}
-                          </span>
-                          <h2 className="text-2xl lg:text-4xl font-bold mb-3 leading-tight line-clamp-3">
-                            {articles[0].title}
-                          </h2>
-                          <p className="text-sm lg:text-base text-gray-200 line-clamp-2 mb-2">
-                            {articles[0].description}
-                          </p>
-                          <div className="flex items-center gap-3 text-xs text-gray-300">
-                            <span>{articles[0].author}</span>
-                            <span>•</span>
-                            <span>{articles[0].views} lượt xem</span>
-                          </div>
-                        </div>
-                      </Link>
-                    )}
-                    
-                    {/* Sidebar - Latest in Category */}
-                    <div className="lg:col-span-1 p-4 lg:p-6 bg-gray-50 border-l border-gray-200">
-                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">MỚI NHẤT</h3>
-                      <div className="space-y-4">
-                        {articles.slice(1, 5).map((article) => (
-                          <Link
-                            key={article.id}
-                            href={`/articles/${article.slug}`}
-                            className="group/article block hover:bg-white rounded-lg p-2 transition-colors"
-                          >
-                            <div className="flex gap-3">
-                              {article.image_url && (
-                                <div className="relative w-20 h-20 flex-shrink-0 rounded overflow-hidden">
-                                  <Image
-                                    src={article.image_url}
-                                    alt={article.title}
-                                    fill
-                                    className="object-cover transition-transform"
-                                    sizes="80px"
-                                  />
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <h4 className="text-xs font-semibold text-gray-900 group-hover/article:text-blue-600 transition-colors line-clamp-2 mb-1">
-                                  {article.title}
-                                </h4>
-                                <span className="text-xs text-gray-500">{article.category}</span>
-                              </div>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              </section>
-            )}
-
-            {/* Magazine Grid Layout - Remaining Articles */}
-            {articles.length > 1 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {articles.slice(1).map((article, idx) => (
+          <div className="masonry-container">
+            {articles.map((article, idx) => (
                   <Link
                     key={article.id}
                     href={`/articles/${article.slug}`}
-                    className="group block"
+                    className="group block masonry-item"
                   >
-                    <article className={`${getCardBgClasses(article.id)} border border-gray-200/50 rounded-xl overflow-hidden hover:shadow-xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 h-full shadow-md`}>
+                    <article className={`${getCardBgClasses(article.id)} border border-gray-200/50 rounded-xl overflow-hidden hover:shadow-xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 shadow-md`}>
                       {article.image_url && (
                         <div className={`relative overflow-hidden ${
-                          idx % 5 === 0 ? 'h-64' : 'h-48'
+                          idx % 6 === 0 ? 'h-64' : idx % 3 === 0 ? 'h-56' : 'h-48'
                         }`}>
                           <Image
                             src={article.image_url}
                             alt={article.title}
                             fill
                             className="object-cover transition-transform duration-300"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                           />
                         </div>
                       )}
@@ -210,12 +130,14 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                           <span className="text-xs text-gray-500">{article.views} lượt xem</span>
                         </div>
                         <h3 className={`font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 mb-2 ${
-                          idx % 5 === 0 ? 'text-lg' : 'text-base'
+                          idx % 6 === 0 ? 'text-lg' : 'text-base'
                         }`}>
                           {article.title}
                         </h3>
                         {article.description && (
-                          <p className="text-sm text-gray-600 line-clamp-2">
+                          <p className={`text-sm text-gray-600 ${
+                            idx % 6 === 0 ? 'line-clamp-3' : 'line-clamp-2'
+                          }`}>
                             {article.description}
                           </p>
                         )}
@@ -232,10 +154,8 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                       </div>
                     </article>
                   </Link>
-                ))}
-              </div>
-            )}
-          </>
+            ))}
+          </div>
         ) : (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">Chưa có bài viết nào trong chủ đề này.</p>

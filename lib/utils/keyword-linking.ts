@@ -3,7 +3,7 @@
  * Automatically add internal links to keywords in article content
  */
 
-import { supabase } from '@/lib/supabase/client';
+import { supabaseAdmin } from '@/lib/supabase/server';
 
 interface KeywordMatch {
   keyword: string;
@@ -123,8 +123,8 @@ async function findMatchingArticles(
   const matches: KeywordMatch[] = [];
 
   try {
-    // Build query
-    let query = supabase
+    // Build query (using supabaseAdmin for server-side)
+    let query = supabaseAdmin
       .from('articles')
       .select('id, title, slug')
       .eq('published', true)
