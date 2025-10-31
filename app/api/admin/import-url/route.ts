@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { scrapeFullArticle, extractMainImage } from '@/lib/utils/scraper';
+import { scrapeFullArticle, extractMainImage, extractArticleImages } from '@/lib/utils/scraper';
 import { addKeywordLinks } from '@/lib/utils/keyword-linking';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -403,30 +403,65 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Use scraped image if available (NO Unsplash!) - GIỐNG HỆT RSS FETCH
-    if (imageUrl) {
-      console.log(`🖼️ Using scraped image: ${imageUrl}`);
+    // Extract multiple images (2-3 images) from article - GIỐNG HỆT RSS FETCH
+    let articleImages: string[] = [];
+    try {
+      articleImages = await extractArticleImages(url, undefined, 3);
+      console.log(`🖼️ Extracted ${articleImages.length} images from article`);
+    } catch (error: any) {
+      console.warn('⚠️ Failed to extract multiple images, using main image:', error.message);
+      // Fallback to single image
+      if (imageUrl) {
+        articleImages = [imageUrl];
+      }
+    }
+
+    // Use scraped images if available (NO Unsplash!) - GIỐNG HỆT RSS FETCH
+    if (articleImages.length > 0) {
+      console.log(`🖼️ Processing ${articleImages.length} images...`);
       
-      // Generate AI caption & alt for scraped image
-      const { caption, alt } = await generateImageCaptionAndAlt(title);
-      
-      // Replace IMAGE_PLACEHOLDER_1 with scraped image
-      if (finalContent.includes('[IMAGE_PLACEHOLDER_1]')) {
-        const imageMarkdown = `\n\n![${alt}](${imageUrl})\n*${caption}*\n`;
-        finalContent = finalContent.replace('[IMAGE_PLACEHOLDER_1]', imageMarkdown);
-        console.log(`✅ Replaced [IMAGE_PLACEHOLDER_1] with scraped image + AI caption & alt`);
-      } else {
-        // If no placeholder, insert after first heading
+      // Process each image with AI-generated caption & alt
+      const imageMarkdowns: string[] = [];
+      for (let i = 0; i < articleImages.length; i++) {
+        const imgUrl = articleImages[i];
+        const { caption, alt } = await generateImageCaptionAndAlt(title);
+        imageMarkdowns.push(`\n\n![${alt}](${imgUrl})\n*${caption}*\n`);
+      }
+
+      // Replace placeholders or insert images
+      let placeholderCount = 0;
+      for (let i = 0; i < imageMarkdowns.length; i++) {
+        const placeholder = `[IMAGE_PLACEHOLDER_${i + 1}]`;
+        if (finalContent.includes(placeholder)) {
+          finalContent = finalContent.replace(placeholder, imageMarkdowns[i]);
+          placeholderCount++;
+          console.log(`✅ Replaced ${placeholder} with image ${i + 1}`);
+        }
+      }
+
+      // If no placeholders, insert images after headings
+      if (placeholderCount === 0 && imageMarkdowns.length > 0) {
+        // Insert first image after first heading
         const firstHeadingMatch = finalContent.match(/^##\s.+$/m);
         if (firstHeadingMatch) {
           const insertPosition = firstHeadingMatch.index! + firstHeadingMatch[0].length;
-          const imageMarkdown = `\n\n![${alt}](${imageUrl})\n*${caption}*\n`;
-          finalContent = finalContent.slice(0, insertPosition) + imageMarkdown + finalContent.slice(insertPosition);
-          console.log(`✅ Inserted scraped image after first heading + AI caption & alt`);
+          finalContent = finalContent.slice(0, insertPosition) + imageMarkdowns[0] + finalContent.slice(insertPosition);
+          console.log(`✅ Inserted first image after first heading`);
+        }
+
+        // Insert remaining images after subsequent headings (if available)
+        if (imageMarkdowns.length > 1) {
+          const headingMatches = Array.from(finalContent.matchAll(/^##\s.+$/gm));
+          for (let i = 1; i < imageMarkdowns.length && i < headingMatches.length; i++) {
+            const headingMatch = headingMatches[i];
+            const insertPosition = headingMatch.index! + headingMatch[0].length;
+            finalContent = finalContent.slice(0, insertPosition) + imageMarkdowns[i] + finalContent.slice(insertPosition);
+            console.log(`✅ Inserted image ${i + 1} after heading ${i + 1}`);
+          }
         }
       }
     } else {
-      console.warn('⚠️ No image available from scraping');
+      console.warn('⚠️ No images available from scraping');
     }
 
     // Remove any remaining placeholders (if any)
@@ -446,7 +481,7 @@ export async function POST(request: NextRequest) {
       slug,
       description: finalDescription, // Use AI-generated description if available
       content: finalContent, // Use AI-rewritten content if available
-      image_url: imageUrl,
+      image_url: articleImages.length > 0 ? articleImages[0] : null, // Use first image as main image
       category: category || 'Công nghệ',
       author: 'Ctrl Z', // Fixed author
       tags: aiTags.length > 0 ? aiTags : [], // Use AI-generated tags

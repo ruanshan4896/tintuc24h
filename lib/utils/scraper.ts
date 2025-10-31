@@ -459,7 +459,10 @@ export async function scrapeFullArticle(url: string): Promise<ScrapedArticle | n
 /**
  * Extract image from article content or page
  */
-export async function extractMainImage(url: string, htmlContent?: string): Promise<string | null> {
+/**
+ * Extract multiple images from article (up to 3 images)
+ */
+export async function extractArticleImages(url: string, htmlContent?: string, maxImages: number = 3): Promise<string[]> {
   try {
     if (!htmlContent) {
       const response = await fetch(url, {
@@ -471,86 +474,104 @@ export async function extractMainImage(url: string, htmlContent?: string): Promi
       htmlContent = await response.text();
     }
 
+    const images: string[] = [];
+
     try {
       const { document } = parseHTML(htmlContent);
 
-      // Try Open Graph image first
+      // Get Open Graph image first (priority)
       const ogImage = document.querySelector('meta[property="og:image"]');
       if (ogImage?.getAttribute('content')) {
-        return ogImage.getAttribute('content');
+        images.push(ogImage.getAttribute('content')!);
       }
 
-      // Try Twitter card image
-      const twitterImage = document.querySelector('meta[name="twitter:image"]');
-      if (twitterImage?.getAttribute('content')) {
-        return twitterImage.getAttribute('content');
-      }
-
-      // Try article image
-      const articleImage = document.querySelector('article img, .article-content img, .post-content img');
-      if (articleImage?.getAttribute('src')) {
-        const imgSrc = articleImage.getAttribute('src')!;
-        // Convert relative URL to absolute
-        return new URL(imgSrc, url).href;
-      }
-
-      // Try any large image
-      const images = Array.from(document.querySelectorAll<HTMLImageElement>('img'));
-      for (const img of images) {
+      // Get all article images (excluding small icons/ads)
+      const articleImages = document.querySelectorAll('article img, .article-content img, .post-content img, .fck_detail img, .detail-content img');
+      
+      for (const img of Array.from(articleImages)) {
         const src = img.getAttribute('src');
-        const width = img.getAttribute('width');
-        const height = img.getAttribute('height');
+        if (!src || images.length >= maxImages) break;
         
-        if (src && (!width || parseInt(width) > 400) && (!height || parseInt(height) > 300)) {
-          return new URL(src, url).href;
+        // Skip invalid images
+        if (src.length < 10 || src.startsWith('data:') || src === '#' || src.includes('icon') || src.includes('logo')) {
+          continue;
+        }
+
+        // Fix relative URLs
+        try {
+          const imgUrl = src.startsWith('//') ? 'https:' + src : 
+                        src.startsWith('/') ? new URL(src, url).href : src;
+          
+          // Avoid duplicates
+          if (!images.includes(imgUrl)) {
+            images.push(imgUrl);
+          }
+        } catch {
+          // Skip invalid URLs
+          continue;
         }
       }
+
+      // Remove duplicates and limit
+      const uniqueImages = Array.from(new Set(images)).slice(0, maxImages);
+      
+      console.log(`🖼️ Extracted ${uniqueImages.length} images from article`);
+      return uniqueImages;
+
     } catch (linkedomError: any) {
-      // linkedom might fail on Vercel - fallback to cheerio
-      console.warn('⚠️ linkedom failed in extractMainImage, using cheerio:', linkedomError.message);
+      console.warn('⚠️ linkedom failed in extractArticleImages, using cheerio:', linkedomError.message);
       
       // Fallback with cheerio
       const $ = cheerio.load(htmlContent);
       
-      // Try Open Graph
+      // Get Open Graph image first
       const ogImage = $('meta[property="og:image"]').attr('content');
-      if (ogImage) return ogImage;
-      
-      // Try Twitter card
-      const twitterImage = $('meta[name="twitter:image"]').attr('content');
-      if (twitterImage) return twitterImage;
-      
-      // Try article image
-      const articleImage = $('article img, .article-content img, .post-content img').first().attr('src');
-      if (articleImage) {
-        try {
-          return new URL(articleImage, url).href;
-        } catch {
-          return articleImage;
-        }
-      }
+      if (ogImage) images.push(ogImage);
 
-      // Try any large image as last resort
-      const largeImg = $('img').filter((_idx, el) => {
+      // Get article images
+      $('article img, .article-content img, .post-content img, .fck_detail img, .detail-content img').each((_idx, el) => {
+        if (images.length >= maxImages) return false;
+        
         const $el = $(el);
-        const width = $el.attr('width');
-        const height = $el.attr('height');
-        return (!width || parseInt(width) > 400) && (!height || parseInt(height) > 300);
-      }).first().attr('src');
-      
-      if (largeImg) {
-        try {
-          return new URL(largeImg, url).href;
-        } catch {
-          return largeImg;
+        const src = $el.attr('src');
+        
+        if (!src || src.length < 10 || src.startsWith('data:') || src === '#' || 
+            src.includes('icon') || src.includes('logo')) {
+          return;
         }
-      }
-    }
 
-    return null;
-  } catch (error) {
-    console.error('Error extracting image:', error);
+        try {
+          const imgUrl = src.startsWith('//') ? 'https:' + src : 
+                        src.startsWith('/') ? new URL(src, url).href : src;
+          
+          if (!images.includes(imgUrl)) {
+            images.push(imgUrl);
+          }
+        } catch {
+          return;
+        }
+      });
+
+      // Remove duplicates and limit
+      const uniqueImages = Array.from(new Set(images)).slice(0, maxImages);
+      
+      console.log(`🖼️ Extracted ${uniqueImages.length} images from article (cheerio)`);
+      return uniqueImages;
+    }
+  } catch (error: any) {
+    console.error('❌ Error extracting images:', error.message);
+    return [];
+  }
+}
+
+export async function extractMainImage(url: string, htmlContent?: string): Promise<string | null> {
+  try {
+    const images = await extractArticleImages(url, htmlContent, 1);
+    return images.length > 0 ? images[0] : null;
+  } catch (error: any) {
+    console.error('❌ Error extracting main image:', error.message);
     return null;
   }
 }
+
 
