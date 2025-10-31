@@ -1,5 +1,4 @@
 import { getArticles } from '@/lib/api/articles';
-import CategorySlider from '@/components/CategorySlider';
 import Link from 'next/link';
 import Image from 'next/image';
 import { CATEGORIES } from '@/lib/constants';
@@ -155,7 +154,7 @@ export default async function HomePage() {
           {/* Left Column - Large Articles */}
           <div className="lg:col-span-2 space-y-6">
             {/* Category Sections */}
-            {CATEGORIES.slice(0, 3).map((category) => {
+            {CATEGORIES.map((category) => {
               const categoryArticles = articlesByCategory[category];
               if (!categoryArticles || categoryArticles.length === 0) return null;
               
@@ -296,21 +295,6 @@ export default async function HomePage() {
           </aside>
         </div>
 
-        {/* Remaining Category Sliders */}
-        {CATEGORIES.slice(3).map((category) => {
-          const categoryArticles = articlesByCategory[category];
-          if (!categoryArticles || categoryArticles.length === 0) return null;
-          
-          return (
-            <CategorySlider
-              key={category}
-              category={category}
-              articles={categoryArticles}
-              categorySlug={categorySlugMap[category]}
-              icon={categoryIcons[category]}
-            />
-          );
-        })}
 
         {/* Empty state */}
         {articles.length === 0 && (
