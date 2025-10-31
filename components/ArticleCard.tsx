@@ -6,6 +6,7 @@ import { Article } from '@/lib/types/article';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toSlug } from '@/lib/utils/slug';
+import { getCardBgClasses } from '@/lib/utils/card-colors';
 
 interface ArticleCardProps {
   article: Article;
@@ -13,7 +14,7 @@ interface ArticleCardProps {
 
 export default function ArticleCard({ article }: ArticleCardProps) {
   return (
-    <article className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg overflow-hidden hover:shadow-2xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 border border-gray-200/50">
+    <article className={`${getCardBgClasses(article.id)} rounded-xl shadow-lg overflow-hidden hover:shadow-2xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 border border-gray-200/50`}>
       <Link href={`/articles/${article.slug}`}>
         {article.image_url && (
           <div className="relative h-48 w-full">

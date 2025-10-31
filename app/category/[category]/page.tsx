@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Breadcrumb from '@/components/Breadcrumb';
+import { getCardBgClasses } from '@/lib/utils/card-colors';
 
 interface CategoryPageProps {
   params: Promise<{
@@ -104,7 +105,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
             {/* Featured Article - First Article as Hero */}
             {articles[0] && (
               <section className="mb-12">
-                <article className="group relative bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-xl overflow-hidden hover:shadow-2xl transition-all duration-300 shadow-lg">
+                <article className={`group relative ${getCardBgClasses(articles[0].id)} border border-gray-200/50 rounded-xl overflow-hidden hover:shadow-2xl transition-all duration-300 shadow-lg`}>
                   <div className="grid lg:grid-cols-3 gap-0">
                     {/* Large Featured Image - Clickable */}
                     {articles[0].image_url && (
@@ -187,7 +188,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                     href={`/articles/${article.slug}`}
                     className="group block"
                   >
-                    <article className="bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-xl overflow-hidden hover:shadow-xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 h-full shadow-md">
+                    <article className={`${getCardBgClasses(article.id)} border border-gray-200/50 rounded-xl overflow-hidden hover:shadow-xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 h-full shadow-md`}>
                       {article.image_url && (
                         <div className={`relative overflow-hidden ${
                           idx % 5 === 0 ? 'h-64' : 'h-48'

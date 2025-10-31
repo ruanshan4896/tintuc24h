@@ -4,6 +4,7 @@ import { Article } from '@/lib/types/article';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { Clock, Eye } from 'lucide-react';
+import { getCardBgClasses } from '@/lib/utils/card-colors';
 
 interface ArticleCardSliderProps {
   article: Article;
@@ -12,7 +13,7 @@ interface ArticleCardSliderProps {
 
 export default function ArticleCardSlider({ article, priority = false }: ArticleCardSliderProps) {
   return (
-    <article className="group bg-white/90 backdrop-blur-sm rounded-xl shadow-lg hover:shadow-2xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 overflow-hidden h-full flex flex-col border border-gray-200/50" suppressHydrationWarning>
+    <article className={`group ${getCardBgClasses(article.id)} rounded-xl shadow-lg hover:shadow-2xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 overflow-hidden h-full flex flex-col border border-gray-200/50`} suppressHydrationWarning>
       <Link href={`/articles/${article.slug}`} className="flex flex-col h-full" prefetch={false} suppressHydrationWarning>
         {/* Image */}
         {article.image_url && (

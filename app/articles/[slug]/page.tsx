@@ -11,6 +11,8 @@ import type { Metadata } from 'next';
 import RelatedArticles from '@/components/RelatedArticles';
 import Breadcrumb from '@/components/Breadcrumb';
 import { getCategorySlug, toSlug } from '@/lib/utils/slug';
+import { getCardBgClasses } from '@/lib/utils/card-colors';
+import { Gift } from 'lucide-react';
 
 interface ArticlePageProps {
   params: Promise<{
@@ -295,7 +297,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                     <Link
                       key={relatedArticle.id}
                       href={`/articles/${relatedArticle.slug}`}
-                      className="group block hover:bg-gray-50 rounded-lg p-3 transition-colors"
+                      className={`group block ${getCardBgClasses(relatedArticle.id)} hover:shadow-md rounded-lg p-3 transition-all border border-gray-200/50`}
                     >
                       {relatedArticle.image_url && (
                         <div className="relative w-full h-32 mb-3 rounded-lg overflow-hidden">
@@ -330,6 +332,68 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                     Chưa có bài viết liên quan
                   </p>
                 )}
+
+                {/* Advertisement Banner 1 */}
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <section className="bg-gradient-to-br from-blue-500 to-purple-600 border border-gray-200/50 rounded-xl p-4 shadow-lg text-white relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.15),transparent_50%)]" aria-hidden="true"></div>
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <Gift className="w-4 h-4" />
+                        <h3 className="text-sm font-bold">Quảng cáo</h3>
+                      </div>
+                      <div className="w-full bg-white/10 backdrop-blur-sm rounded-lg p-2 mb-2 border border-white/20">
+                        <a 
+                          href="https://haudaiseo009.pages.dev/go/qh88?site=tintuc" 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="block w-full"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img 
+                            src="https://lh3.googleusercontent.com/d/12g3IJugKxAG0pt9KlYVXBOjbBVmNVR06=w1920?authuser=0" 
+                            alt="Advertisement" 
+                            className="w-full h-auto rounded"
+                            style={{ maxWidth: '100%', height: 'auto', display: 'block', objectFit: 'contain' }}
+                            referrerPolicy="no-referrer"
+                            decoding="async"
+                          />
+                        </a>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+
+                {/* Advertisement Banner 2 */}
+                <div className="mt-4">
+                  <section className="bg-gradient-to-br from-orange-500 to-pink-600 border border-gray-200/50 rounded-xl p-4 shadow-lg text-white relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(255,255,255,0.15),transparent_50%)]" aria-hidden="true"></div>
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <Gift className="w-4 h-4" />
+                        <h3 className="text-sm font-bold">Ưu đãi đặc biệt</h3>
+                      </div>
+                      <div className="w-full bg-white/10 backdrop-blur-sm rounded-lg p-2 border border-white/20">
+                        <a 
+                          href="https://w.mm9954.com/?inviteCode=90970249" 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="block w-full"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img 
+                            src="https://lh3.googleusercontent.com/d/1_RmlzgxTdQTm-wV41eha1ufBUu5zDMES=w1920?authuser=0" 
+                            alt="Advertisement" 
+                            className="w-full h-auto rounded"
+                            style={{ maxWidth: '100%', height: 'auto', display: 'block', objectFit: 'contain' }}
+                            referrerPolicy="no-referrer"
+                            decoding="async"
+                          />
+                        </a>
+                      </div>
+                    </div>
+                  </section>
+                </div>
               </div>
             </aside>
           </div>
