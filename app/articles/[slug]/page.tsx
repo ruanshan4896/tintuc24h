@@ -276,9 +276,14 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                   ← Quay lại trang chủ
                 </Link>
               </div>
+
+              {/* Mobile Related Articles */}
+              <div className="lg:hidden mt-12">
+                <RelatedArticles articles={relatedArticles} />
+              </div>
             </div>
 
-            {/* Fixed Sidebar - Related Articles */}
+            {/* Fixed Sidebar - Related Articles (Desktop Only) */}
             <aside className="hidden lg:block w-80 flex-shrink-0 sticky top-24 self-start">
               <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
                 <h2 className="text-xl font-bold text-gray-900 mb-4 pb-3 border-b border-gray-200">
