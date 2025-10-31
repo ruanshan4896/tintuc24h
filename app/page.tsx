@@ -281,49 +281,54 @@ export default async function HomePage() {
                   </div>
                   
                   <div className="grid md:grid-cols-2 gap-4">
-                    {categoryArticles.slice(0, 4).map((article, idx) => (
-                      <Link
-                        key={article.id}
-                        href={`/articles/${article.slug}`}
-                        className={`group block ${
-                          idx === 0 ? 'md:col-span-2' : ''
-                        }`}
-                      >
-                        <article className="bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-xl overflow-hidden hover:shadow-xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 shadow-md">
-                          {article.image_url && (
-                            <div className={`relative overflow-hidden ${
-                              idx === 0 ? 'h-64' : 'h-40'
-                            }`}>
-                              <Image
-                                src={article.image_url}
-                                alt={article.title}
-                                fill
-                                className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                sizes={idx === 0 ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 100vw, 33vw"}
-                              />
-                            </div>
-                          )}
-                          <div className="p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-semibold rounded">
-                                {article.category}
-                              </span>
-                              <span className="text-xs text-gray-500">{article.views} lượt xem</span>
-                            </div>
-                            <h3 className={`font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 ${
-                              idx === 0 ? 'text-xl' : 'text-base'
-                            }`}>
-                              {article.title}
-                            </h3>
-                            {idx === 0 && article.description && (
-                              <p className="text-sm text-gray-600 line-clamp-2 mt-2">
-                                {article.description}
-                              </p>
+                    {(() => {
+                      const displayArticles = categoryArticles.slice(0, 4);
+                      const hasEnoughArticles = displayArticles.length >= 4;
+                      
+                      return displayArticles.map((article, idx) => (
+                        <Link
+                          key={article.id}
+                          href={`/articles/${article.slug}`}
+                          className={`group block ${
+                            idx === 0 && hasEnoughArticles ? 'md:col-span-2' : ''
+                          }`}
+                        >
+                          <article className="bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-xl overflow-hidden hover:shadow-xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 shadow-md h-full">
+                            {article.image_url && (
+                              <div className={`relative overflow-hidden ${
+                                idx === 0 && hasEnoughArticles ? 'h-64' : 'h-40'
+                              }`}>
+                                <Image
+                                  src={article.image_url}
+                                  alt={article.title}
+                                  fill
+                                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                  sizes={idx === 0 && hasEnoughArticles ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 100vw, 33vw"}
+                                />
+                              </div>
                             )}
-                          </div>
-                        </article>
-                      </Link>
-                    ))}
+                            <div className="p-4">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-semibold rounded">
+                                  {article.category}
+                                </span>
+                                <span className="text-xs text-gray-500">{article.views} lượt xem</span>
+                              </div>
+                              <h3 className={`font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 ${
+                                idx === 0 && hasEnoughArticles ? 'text-xl' : 'text-base'
+                              }`}>
+                                {article.title}
+                              </h3>
+                              {idx === 0 && hasEnoughArticles && article.description && (
+                                <p className="text-sm text-gray-600 line-clamp-2 mt-2">
+                                  {article.description}
+                                </p>
+                              )}
+                            </div>
+                          </article>
+                        </Link>
+                      ));
+                    })()}
                   </div>
                 </section>
               );
