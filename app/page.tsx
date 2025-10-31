@@ -47,8 +47,6 @@ export default async function HomePage() {
       .slice(0, 10); // Limit 10 articles per category
   });
 
-  // Featured article (most viewed)
-  const featuredArticle = [...articles].sort((a, b) => b.views - a.views)[0];
 
   return (
     <div className="min-h-screen" suppressHydrationWarning>
@@ -98,9 +96,14 @@ export default async function HomePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Magazine Style Layout */}
         
-        {/* Featured Section - Magazine Hero */}
-        {featuredArticle && (
-          <section className="mb-12">
+        {/* Featured Articles Section */}
+        {(() => {
+          const featuredArticles = articles
+            .sort((a, b) => b.views - a.views)
+            .slice(0, 4);
+          
+          return featuredArticles.length > 0 ? (
+            <section className="mb-12">
             <div className="flex items-center gap-3 mb-6">
               <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full text-sm font-bold shadow-lg">
                 <TrendingUp className="w-4 h-4" />
@@ -109,115 +112,8 @@ export default async function HomePage() {
               <div className="h-0.5 flex-1 bg-gradient-to-r from-orange-500 to-transparent"></div>
             </div>
             
-              <article className="group relative bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-xl overflow-hidden hover:shadow-2xl transition-all duration-300 shadow-lg">
-              <div className="grid lg:grid-cols-3 gap-0">
-                {/* Large Featured Image - Clickable */}
-                {featuredArticle.image_url && (
-                  <Link href={`/articles/${featuredArticle.slug}`} className="lg:col-span-2 relative h-64 lg:h-96 overflow-hidden block">
-                    <Image
-                      src={featuredArticle.image_url}
-                      alt={featuredArticle.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
-                      priority
-                      fetchPriority="high"
-                      quality={75}
-                      sizes="(max-width: 1024px) 100vw, 66vw"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                    
-                    {/* Overlay Content */}
-                    <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-8 text-white">
-                      <span className="inline-block px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded mb-3">
-                        {featuredArticle.category}
-                      </span>
-                      <h2 className="text-2xl lg:text-4xl font-bold mb-3 leading-tight line-clamp-3">
-                        {featuredArticle.title}
-                      </h2>
-                      <p className="text-sm lg:text-base text-gray-200 line-clamp-2 mb-2">
-                        {featuredArticle.description}
-                      </p>
-                      <div className="flex items-center gap-3 text-xs text-gray-300">
-                        <span>{featuredArticle.author}</span>
-                        <span>•</span>
-                        <span>{featuredArticle.views} lượt xem</span>
-                      </div>
-                    </div>
-                  </Link>
-                )}
-                
-                {/* Sidebar Articles */}
-                <div className="lg:col-span-1 p-4 lg:p-6 bg-gray-50/80 backdrop-blur-sm border-l border-gray-200/50 flex flex-col">
-                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">MỚI NHẤT</h3>
-                  <div className="space-y-3 flex-1">
-                    {(() => {
-                      const sidebarArticles = articles
-                        .filter(a => a.id !== featuredArticle.id)
-                        .slice(0, 4);
-                      
-                      // Fill with empty placeholders if less than 4 articles
-                      while (sidebarArticles.length < 4) {
-                        sidebarArticles.push(null as any);
-                      }
-                      
-                      return sidebarArticles.map((article, idx) => (
-                        article ? (
-                          <Link
-                            key={article.id}
-                            href={`/articles/${article.slug}`}
-                            className="group/article block hover:bg-white/50 rounded-lg p-2 transition-colors backdrop-blur-sm"
-                          >
-                            <div className="flex gap-3">
-                              {article.image_url && (
-                                <div className="relative w-20 h-20 flex-shrink-0 rounded overflow-hidden">
-                                  <Image
-                                    src={article.image_url}
-                                    alt={article.title}
-                                    fill
-                                    className="object-cover group-hover/article:scale-105 transition-transform"
-                                    sizes="80px"
-                                  />
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <h4 className="text-xs font-semibold text-gray-900 group-hover/article:text-blue-600 transition-colors line-clamp-2 mb-1">
-                                  {article.title}
-                                </h4>
-                                <span className="text-xs text-gray-500">{article.category}</span>
-                              </div>
-                            </div>
-                          </Link>
-                        ) : (
-                          <div key={`placeholder-${idx}`} className="h-24 bg-gray-100/50 rounded-lg animate-pulse"></div>
-                        )
-                      ));
-                    })()}
-                  </div>
-                </div>
-              </div>
-            </article>
-          </section>
-        )}
-
-        {/* Trending Articles Section - Fill empty space below featured */}
-        {(() => {
-          const trendingArticles = articles
-            .filter(a => featuredArticle ? a.id !== featuredArticle.id : true)
-            .sort((a, b) => b.views - a.views)
-            .slice(0, 4);
-          
-          return trendingArticles.length > 0 ? (
-            <section className="mb-12">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-sm font-bold shadow-lg">
-                  <TrendingUp className="w-4 h-4" />
-                  XU HƯỚNG
-                </div>
-                <div className="h-0.5 flex-1 bg-gradient-to-r from-pink-500 to-transparent"></div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {trendingArticles.map((article) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {featuredArticles.map((article) => (
                   <Link
                     key={article.id}
                     href={`/articles/${article.slug}`}
