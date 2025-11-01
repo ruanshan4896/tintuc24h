@@ -94,6 +94,43 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tintuc24h-seven.vercel.app';
+  
+  // Organization schema for SEO
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Ctrl Z',
+    alternateName: 'Ctrl Z News',
+    url: baseUrl,
+    logo: `${baseUrl}/og-image.jpg`,
+    description: 'Ctrl Z - Tin tức minh bạch, đa chiều. Hoàn tác tin giả, khôi phục sự thật.',
+    sameAs: [
+      // Add social media links when available
+    ],
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'Customer Service',
+      availableLanguage: ['Vietnamese'],
+    },
+  };
+
+  // WebSite schema with searchAction
+  const websiteSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Ctrl Z',
+    url: baseUrl,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${baseUrl}/search?q={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  };
+
   return (
     <html lang="vi" suppressHydrationWarning className={inter.variable}>
       <head>
@@ -104,6 +141,9 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://i1-vnexpress.vnecdn.net" />
         <link rel="dns-prefetch" href="https://cdn.24h.com.vn" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        
+        {/* RSS Feed */}
+        <link rel="alternate" type="application/rss+xml" title="Ctrl Z RSS Feed" href={`${baseUrl}/rss.xml`} />
         
         {/* Critical CSS for above-the-fold content */}
         <style dangerouslySetInnerHTML={{
@@ -117,6 +157,18 @@ export default function RootLayout({
         {/* Favicon optimized */}
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/favicon.ico" />
+        
+        {/* Structured Data - Organization */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
+        
+        {/* Structured Data - WebSite */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+        />
         
         {/* PWA Service Worker registration */}
         <script dangerouslySetInnerHTML={{

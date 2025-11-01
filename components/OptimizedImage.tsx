@@ -46,14 +46,6 @@ export default function OptimizedImage({
   const [hasError, setHasError] = useState(false);
   const [retryAttempts, setRetryAttempts] = useState(0);
 
-  // Reset when src changes
-  useEffect(() => {
-    setImgSrc(src);
-    setIsLoading(true);
-    setHasError(false);
-    setRetryAttempts(0);
-  }, [src]);
-
   const handleError = () => {
     console.warn(`⚠️ Image failed to load: ${imgSrc}`);
     
@@ -84,9 +76,85 @@ export default function OptimizedImage({
   };
 
   const handleLoad = () => {
+    console.log(`✅ Image loaded successfully: ${imgSrc}`);
     setIsLoading(false);
     setHasError(false);
   };
+  
+  // Enhanced error handler for Image component
+  const handleImageError = () => {
+    handleError();
+  };
+  
+  // Check if image loaded successfully after a delay (fallback for onLoad not firing)
+  useEffect(() => {
+    if (!isLoading || typeof window === 'undefined') return;
+    
+    // If still loading after 3 seconds, check if image element exists and loaded
+    const checkTimeout = setTimeout(() => {
+      try {
+        // Try to find the Next.js Image component's underlying img element
+        const imgs = document.querySelectorAll('img');
+        const foundImg = Array.from(imgs).find(img => 
+          img.src.includes(imgSrc.split('?')[0]) || 
+          img.getAttribute('src')?.includes(imgSrc.split('?')[0])
+        );
+        
+        if (foundImg && (foundImg as HTMLImageElement).complete && (foundImg as HTMLImageElement).naturalHeight > 0) {
+          console.log(`✅ Image loaded (detected via DOM check): ${imgSrc}`);
+          setIsLoading(false);
+          setHasError(false);
+        }
+      } catch (e) {
+        // Silent fail for DOM check
+      }
+    }, 3000); // Check after 3 seconds
+    
+    return () => clearTimeout(checkTimeout);
+  }, [isLoading, imgSrc]);
+
+  // Reset when src changes
+  useEffect(() => {
+    setImgSrc(src);
+    setIsLoading(true);
+    setHasError(false);
+    setRetryAttempts(0);
+    
+    // Timeout fallback: if image doesn't load within 8 seconds, show error
+    const timeoutId = setTimeout(() => {
+      console.warn(`⏱️ Image load timeout (8s) for: ${src}`);
+      setIsLoading(prev => {
+        if (prev) {
+          // Still loading after timeout, trigger error handling
+          handleError();
+        }
+        return false;
+      });
+    }, 8000); // 8 second timeout (reduced for faster fallback)
+    
+    return () => clearTimeout(timeoutId);
+  }, [src]);
+  
+  // Additional absolute timeout check when component is loading
+  useEffect(() => {
+    if (!isLoading) return;
+    
+    const timeoutId = setTimeout(() => {
+      console.warn(`⏱️ Image still loading after 12s absolute timeout: ${imgSrc}`);
+      // Force stop loading and try fallback
+      setIsLoading(false);
+      if (imgSrc !== fallbackSrc && retryAttempts < retryCount) {
+        handleError();
+      } else {
+        setHasError(true);
+        if (onError) {
+          onError();
+        }
+      }
+    }, 12000); // 12 second absolute timeout (reduced)
+    
+    return () => clearTimeout(timeoutId);
+  }, [isLoading, imgSrc, fallbackSrc, retryAttempts, retryCount, onError]);
 
   // Build className with object-fit
   const objectFitClass = objectFit === 'cover' ? 'object-cover' :
@@ -118,8 +186,9 @@ export default function OptimizedImage({
           priority={priority}
           quality={quality}
           loading={loading}
-          onError={handleError}
+          onError={handleImageError}
           onLoad={handleLoad}
+          onLoadingComplete={handleLoad} // Additional callback for Next.js Image
           placeholder="blur"
           blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQ3NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiLz4="
           unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('lh3.googleusercontent.com')}
@@ -174,8 +243,9 @@ export default function OptimizedImage({
           priority={priority}
           quality={quality}
           loading={loading}
-          onError={handleError}
+          onError={handleImageError}
           onLoad={handleLoad}
+          onLoadingComplete={handleLoad} // Additional callback for Next.js Image
           placeholder="blur"
           blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQ3NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiLz4="
           unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('lh3.googleusercontent.com')}
@@ -191,8 +261,9 @@ export default function OptimizedImage({
           priority={priority}
           quality={quality}
           loading={loading}
-          onError={handleError}
+          onError={handleImageError}
           onLoad={handleLoad}
+          onLoadingComplete={handleLoad} // Additional callback for Next.js Image
           placeholder="blur"
           blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQ3NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiLz4="
           unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('lh3.googleusercontent.com')}

@@ -47,22 +47,29 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       };
     }
 
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tintuc24h-seven.vercel.app';
+    const articleUrl = `${baseUrl}/articles/${slug}`;
+    
+    // Enhanced meta description with keywords
+    const enhancedDescription = article.description || 
+      `${article.title}. Tin tức ${article.category.toLowerCase()} mới nhất từ Ctrl Z. ${article.tags.slice(0, 3).join(', ')}`;
+    
     return {
       title: article.title,
-      description: article.description,
-      keywords: article.tags.join(', '),
+      description: enhancedDescription,
+      keywords: [...article.tags, article.category, 'tin tức', 'news', 'ctrl z'].join(', '),
       authors: [{ name: article.author }],
       alternates: {
         canonical: `/articles/${slug}`,
       },
       openGraph: {
         title: article.title,
-        description: article.description,
+        description: enhancedDescription,
         type: 'article',
         publishedTime: article.created_at,
         modifiedTime: article.updated_at,
         authors: [article.author],
-        url: `/articles/${slug}`,
+        url: articleUrl,
         images: article.image_url ? [
           {
             url: article.image_url,
@@ -72,12 +79,19 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
           },
         ] : [],
         tags: article.tags,
+        section: article.category,
       },
       twitter: {
         card: 'summary_large_image',
         title: article.title,
-        description: article.description,
+        description: enhancedDescription,
         images: article.image_url ? [article.image_url] : [],
+      },
+      other: {
+        'article:published_time': article.created_at,
+        'article:modified_time': article.updated_at,
+        'article:author': article.author,
+        'article:section': article.category,
       },
     };
   } catch (error) {
@@ -114,12 +128,28 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     4
   );
 
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tintuc24h-seven.vercel.app';
+  const articleUrl = `${baseUrl}/articles/${article.slug}`;
+  
+  // Calculate word count from content (rough estimation)
+  const wordCount = article.content.split(/\s+/).filter(word => word.length > 0).length;
+  
+  // Extract main image with proper formatting
+  const images = article.image_url ? [{
+    '@type': 'ImageObject',
+    url: article.image_url,
+    width: 1200,
+    height: 630,
+  }] : [];
+
+  // Enhanced Article schema for better SEO
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'NewsArticle',
     headline: article.title,
     description: article.description,
-    image: article.image_url,
+    image: images.length > 0 ? images[0].url : undefined,
+    images: images.length > 0 ? images : undefined,
     datePublished: article.created_at,
     dateModified: article.updated_at,
     author: {
@@ -128,12 +158,32 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     },
     publisher: {
       '@type': 'Organization',
-      name: 'TinTức',
+      name: 'Ctrl Z',
       logo: {
         '@type': 'ImageObject',
-        url: '/logo.png',
+        url: `${baseUrl}/og-image.jpg`,
+        width: 600,
+        height: 315,
       },
     },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': articleUrl,
+    },
+    articleSection: article.category,
+    keywords: article.tags.join(', '),
+    articleBody: article.content,
+    wordCount: wordCount,
+    inLanguage: 'vi-VN',
+    url: articleUrl,
+    ...(article.image_url && {
+      image: {
+        '@type': 'ImageObject',
+        url: article.image_url,
+        width: 1200,
+        height: 630,
+      },
+    }),
   };
 
   return (
@@ -211,39 +261,45 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                         {children}
                       </Link>
                     ),
-                    // Custom paragraph renderer to handle images
-                    p: ({ node, children, ...props }) => {
-                      // Check if paragraph only contains an image
-                      const isImageParagraph = node && 
-                        node.children && 
-                        node.children.length === 1 && 
-                        node.children[0] &&
-                        'type' in node.children[0] &&
-                        node.children[0].type === 'element' && 
-                        'tagName' in node.children[0] &&
-                        node.children[0].tagName === 'img';
-                      
-                      if (isImageParagraph) {
-                        // Return image wrapped in div instead of p
-                        return <div className="my-6">{children}</div>;
+                    // Custom paragraph renderer - detect if paragraph contains only image
+                    p: ({ node, children, ...props }: any) => {
+                      // Check if this paragraph contains ONLY an image (no text)
+                      if (node?.children && Array.isArray(node.children)) {
+                        // Count image nodes and text nodes
+                        let imageCount = 0;
+                        let textCount = 0;
+                        
+                        node.children.forEach((child: any) => {
+                          if (child?.type === 'element' && child?.tagName === 'img') {
+                            imageCount++;
+                          } else if (child?.type === 'text' && child?.value?.trim()) {
+                            textCount++;
+                          }
+                        });
+                        
+                        // If paragraph contains only images (no text), use div instead of p
+                        if (imageCount > 0 && textCount === 0) {
+                          return <div className="my-6 block">{children}</div>;
+                        }
                       }
                       
-                      // Normal paragraph
+                      // Normal paragraph with text content
                       return <p {...props}>{children}</p>;
                     },
-                    img: ({ node, src, alt, ...props }) => {
+                    img: ({ node, src, alt, ...props }: any) => {
                       if (!src || typeof src !== 'string') return null;
                       
+                      // Use inline={true} to prevent wrapper div, since paragraph renderer handles the wrapper
                       return (
                         <OptimizedImage
                           src={src}
                           alt={alt || ''}
                           width={800}
                           height={450}
-                          className="rounded-lg w-full h-auto"
+                          className="rounded-lg w-full h-auto block"
                           objectFit="contain"
                           loading="lazy"
-                          inline={false}
+                          inline={true}
                         />
                       );
                     },

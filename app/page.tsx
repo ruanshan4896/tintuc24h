@@ -12,8 +12,17 @@ export const revalidate = 60; // Revalidate every 60 seconds
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 export const metadata: Metadata = {
+  title: 'Trang chủ - Tin tức Ctrl Z',
+  description: 'Tin tức mới nhất về Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí, Game. Ctrl Z - Hoàn tác tin giả, khôi phục sự thật với tin tức minh bạch, đa chiều.',
+  keywords: ['tin tức', 'news', 'công nghệ', 'thể thao', 'sức khỏe', 'ô tô', 'giải trí', 'game', 'ctrl z', 'tin tức mới nhất'],
   alternates: {
     canonical: '/',
+  },
+  openGraph: {
+    title: 'Ctrl Z - Tin tức mới nhất mỗi ngày',
+    description: 'Cập nhật tin tức nóng hổi từ mọi lĩnh vực: Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí, Game',
+    url: '/',
+    type: 'website',
   },
 };
 
