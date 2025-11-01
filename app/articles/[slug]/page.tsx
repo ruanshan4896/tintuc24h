@@ -1,7 +1,7 @@
-import { getArticles, getRelatedArticles } from '@/lib/api/articles';
-import { getArticleBySlugServer, getArticlesServer } from '@/lib/api/articles-server';
+import { getArticleBySlugCached, getRelatedArticlesCached } from '@/lib/api/articles-cache';
+import { getArticlesServer } from '@/lib/api/articles-server';
 import { notFound } from 'next/navigation';
-import Image from 'next/image';
+import OptimizedImage from '@/components/OptimizedImage';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   const { slug } = await params;
   
   try {
-    const article = await getArticleBySlugServer(slug);
+    const article = await getArticleBySlugCached(slug);
 
     if (!article) {
       return {
@@ -94,7 +94,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   
   let article;
   try {
-    article = await getArticleBySlugServer(slug);
+    article = await getArticleBySlugCached(slug);
     console.log('ArticlePage - Article found:', article ? 'YES' : 'NO');
   } catch (error) {
     console.error('ArticlePage - Error:', error);
@@ -106,8 +106,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     notFound();
   }
 
-  // Fetch related articles
-  const relatedArticles = await getRelatedArticles(
+  // Fetch related articles (cached and optimized)
+  const relatedArticles = await getRelatedArticlesCached(
     article.id,
     article.category,
     article.tags || [],
@@ -211,17 +211,42 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                         {children}
                       </Link>
                     ),
-                    img: ({ node, src, alt, ...props }) => (
-                      src && typeof src === 'string' ? (
-                        <Image
+                    // Custom paragraph renderer to handle images
+                    p: ({ node, children, ...props }) => {
+                      // Check if paragraph only contains an image
+                      const isImageParagraph = node && 
+                        node.children && 
+                        node.children.length === 1 && 
+                        node.children[0] &&
+                        'type' in node.children[0] &&
+                        node.children[0].type === 'element' && 
+                        'tagName' in node.children[0] &&
+                        node.children[0].tagName === 'img';
+                      
+                      if (isImageParagraph) {
+                        // Return image wrapped in div instead of p
+                        return <div className="my-6">{children}</div>;
+                      }
+                      
+                      // Normal paragraph
+                      return <p {...props}>{children}</p>;
+                    },
+                    img: ({ node, src, alt, ...props }) => {
+                      if (!src || typeof src !== 'string') return null;
+                      
+                      return (
+                        <OptimizedImage
                           src={src}
                           alt={alt || ''}
                           width={800}
                           height={450}
-                          className="rounded-lg my-6 w-full h-auto"
+                          className="rounded-lg w-full h-auto"
+                          objectFit="contain"
+                          loading="lazy"
+                          inline={false}
                         />
-                      ) : null
-                    ),
+                      );
+                    },
                   }}
                 >
                   {article.content}
@@ -301,12 +326,14 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                     >
                       {relatedArticle.image_url && (
                         <div className="relative w-full h-32 mb-3 rounded-lg overflow-hidden">
-                          <Image
+                          <OptimizedImage
                             src={relatedArticle.image_url}
                             alt={relatedArticle.title}
                             fill
                             className="object-cover transition-transform duration-300"
                             sizes="(max-width: 1024px) 0vw, 320px"
+                            objectFit="cover"
+                            loading="lazy"
                           />
                         </div>
                       )}

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import Image from 'next/image';
+import OptimizedImage from '@/components/OptimizedImage';
 import { Article } from '@/lib/types/article';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -18,16 +18,16 @@ export default function ArticleCardSlider({ article, priority = false }: Article
         {/* Image */}
         {article.image_url && (
           <div className="relative h-52 w-full overflow-hidden bg-gray-100">
-            <Image
+            <OptimizedImage
               src={article.image_url}
               alt={article.title}
               fill
               className="object-cover transition-transform duration-500"
               sizes="(max-width: 768px) 300px, 350px"
               loading={priority ? 'eager' : 'lazy'}
+              priority={priority}
               quality={75}
-              placeholder="blur"
-              blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQ3NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiLz4="
+              objectFit="cover"
             />
             {/* Gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />

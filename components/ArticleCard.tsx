@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
+import OptimizedImage from '@/components/OptimizedImage';
 import { Article } from '@/lib/types/article';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -18,12 +18,14 @@ export default function ArticleCard({ article }: ArticleCardProps) {
       <Link href={`/articles/${article.slug}`}>
         {article.image_url && (
           <div className="relative h-48 w-full">
-            <Image
+            <OptimizedImage
               src={article.image_url}
               alt={article.title}
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              loading="lazy"
+              objectFit="cover"
             />
           </div>
         )}

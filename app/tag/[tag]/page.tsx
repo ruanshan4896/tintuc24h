@@ -1,4 +1,4 @@
-import { getArticlesByTagServer } from '@/lib/api/articles-server';
+import { getArticlesByTagCached } from '@/lib/api/articles-cache';
 import ArticleCard from '@/components/ArticleCard';
 import Link from 'next/link';
 import { Tag } from 'lucide-react';
@@ -31,8 +31,8 @@ export async function generateMetadata({ params }: TagPageProps): Promise<Metada
     // Display name: convert slug back to readable format
     const tagDisplay = tagSlug.replace(/-/g, ' ');
     
-    // Get article count to decide indexing
-    const articles = await getArticlesByTagServer(tagSlug, true);
+    // Get article count to decide indexing (cached and optimized)
+    const articles = await getArticlesByTagCached(tagSlug, true);
     const articleCount = articles.length;
     
     // SEO Best Practice: 
@@ -95,7 +95,7 @@ export default async function TagPage({ params }: TagPageProps) {
     // Display name: convert slug back to readable format
     const tagDisplay = tagSlug.replace(/-/g, ' ');
     
-    const articles = await getArticlesByTagServer(tagSlug, true);
+    const articles = await getArticlesByTagCached(tagSlug, true);
 
     return (
       <div className="bg-gray-50 min-h-screen">

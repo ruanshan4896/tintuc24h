@@ -1,8 +1,8 @@
-import { getArticlesByCategory } from '@/lib/api/articles';
+import { getArticlesByCategoryCached } from '@/lib/api/articles-cache';
 import ArticleCard from '@/components/ArticleCard';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import Image from 'next/image';
+import OptimizedImage from '@/components/OptimizedImage';
 import Breadcrumb from '@/components/Breadcrumb';
 import { getCardBgClasses } from '@/lib/utils/card-colors';
 
@@ -53,7 +53,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   };
   
   const categoryDisplayName = categoryMap[categorySlug] || categoryName;
-  const articles = await getArticlesByCategory(categoryDisplayName, true);
+  const articles = await getArticlesByCategoryCached(categoryDisplayName, true);
   const backgroundImage = categoryBackgrounds[categorySlug] || categoryBackgrounds['cong-nghe'];
 
   return (
@@ -69,7 +69,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       {/* Header with Background Image */}
       <section className="relative h-[400px] md:h-[500px] overflow-hidden">
         {/* Background Image */}
-        <Image
+        <OptimizedImage
           src={backgroundImage}
           alt={categoryDisplayName}
           fill
@@ -77,6 +77,8 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           quality={85}
           className="object-cover"
           sizes="100vw"
+          objectFit="cover"
+          loading="eager"
         />
         
         {/* Overlay Gradient */}
@@ -113,10 +115,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                         <div className={`relative overflow-hidden ${
                           idx % 6 === 0 ? 'h-64' : idx % 3 === 0 ? 'h-56' : 'h-48'
                         }`}>
-                          <Image
+                          <OptimizedImage
                             src={article.image_url}
                             alt={article.title}
                             fill
+                            objectFit="cover"
+                            loading="lazy"
                             className="object-cover transition-transform duration-300"
                             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                           />

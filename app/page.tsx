@@ -1,6 +1,6 @@
-import { getArticles } from '@/lib/api/articles';
+import { getArticlesByCategoryCached, getPopularTagsCached } from '@/lib/api/articles-cache';
 import Link from 'next/link';
-import Image from 'next/image';
+import OptimizedImage from '@/components/OptimizedImage';
 import { CATEGORIES } from '@/lib/constants';
 import { Newspaper, TrendingUp, Mail, Facebook, Youtube, Twitter, Tag as TagIcon, Gift } from 'lucide-react';
 import type { Metadata } from 'next';
@@ -38,29 +38,24 @@ const categorySlugMap: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const articles = await getArticles(true);
-
+  // Fetch articles by category in parallel (much more efficient than fetch all then filter)
+  const categoryPromises = CATEGORIES.map(cat => 
+    getArticlesByCategoryCached(cat, true)
+  );
+  
+  const categoryResults = await Promise.all(categoryPromises);
+  
   // Group articles by category
-  const articlesByCategory: Record<string, typeof articles> = {};
-  CATEGORIES.forEach(cat => {
-    articlesByCategory[cat] = articles
-      .filter(article => article.category === cat)
-      .slice(0, 10); // Limit 10 articles per category
+  const articlesByCategory: Record<string, typeof categoryResults[0]> = {};
+  CATEGORIES.forEach((cat, index) => {
+    articlesByCategory[cat] = categoryResults[index].slice(0, 10); // Limit 10 per category
   });
 
-  // Get popular tags from all articles
-  const tagCounts: Record<string, number> = {};
-  articles.forEach(article => {
-    if (article.tags && article.tags.length > 0) {
-      article.tags.forEach(tag => {
-        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-      });
-    }
-  });
-  const popularTags = Object.entries(tagCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 10)
-    .map(([tag]) => tag);
+  // Get popular tags (cached, separate optimized query)
+  const popularTags = await getPopularTagsCached(10);
+
+  // Flatten all articles for sidebar sections (popular/recent)
+  const allArticles = Object.values(articlesByCategory).flat();
 
   // Prepare sidebar widgets for mobile distribution
   type SidebarWidget = {
@@ -387,7 +382,7 @@ export default async function HomePage() {
         
         {/* Featured Articles Section */}
         {(() => {
-          const featuredArticles = articles
+          const featuredArticles = allArticles
             .sort((a, b) => b.views - a.views)
             .slice(0, 4);
           
@@ -411,12 +406,14 @@ export default async function HomePage() {
                     <article className={`${getCardBgClasses(article.id)} border border-gray-200/50 rounded-xl overflow-hidden hover:shadow-xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 shadow-md h-full`}>
                       {article.image_url && (
                         <div className="relative h-40 overflow-hidden">
-                          <Image
+                          <OptimizedImage
                             src={article.image_url}
                             alt={article.title}
                             fill
                             className="object-cover transition-transform duration-300"
                             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                            objectFit="cover"
+                            loading="lazy"
                           />
                         </div>
                       )}
@@ -481,13 +478,16 @@ export default async function HomePage() {
                                 <div className={`relative overflow-hidden ${
                                   articleIdx === 0 ? 'h-64' : 'h-40'
                                 }`}>
-                                  <Image
+                                  <OptimizedImage
                                     src={article.image_url}
                                     alt={article.title}
                                     fill
                                     className="object-cover transition-transform duration-300"
                                     sizes={articleIdx === 0 ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 100vw, 33vw"}
-                                  />
+                                    objectFit="cover"
+                                    loading={articleIdx === 0 ? "eager" : "lazy"}
+                                    priority={articleIdx === 0}
+                          />
                                 </div>
                               )}
                               <div className="p-4">
@@ -558,10 +558,13 @@ export default async function HomePage() {
                               <div className={`relative overflow-hidden ${
                                 idx === 0 ? 'h-64' : 'h-40'
                               }`}>
-                                <Image
+                                <OptimizedImage
                                   src={article.image_url}
                                   alt={article.title}
                                   fill
+                                  objectFit="cover"
+                                  loading={idx === 0 ? "eager" : "lazy"}
+                                  priority={idx === 0}
                                   className="object-cover transition-transform duration-300"
                                   sizes={idx === 0 ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 100vw, 33vw"}
                                 />
@@ -603,7 +606,7 @@ export default async function HomePage() {
                 📊 Đọc nhiều
               </h2>
               <div className="space-y-4">
-                {articles
+                {allArticles
                   .sort((a, b) => b.views - a.views)
                   .slice(0, 5)
                   .map((article, idx) => (
@@ -632,7 +635,7 @@ export default async function HomePage() {
                 🕐 Mới nhất
               </h2>
               <div className="space-y-4">
-                {articles
+                {allArticles
                   .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                   .slice(0, 5)
                   .map((article) => (
@@ -643,12 +646,14 @@ export default async function HomePage() {
                     >
                       {article.image_url && (
                         <div className="relative w-full h-32 mb-2 rounded-lg overflow-hidden">
-                          <Image
+                          <OptimizedImage
                             src={article.image_url}
                             alt={article.title}
                             fill
                             className="object-cover transition-transform duration-300"
                             sizes="(max-width: 1024px) 0vw, 320px"
+                            objectFit="cover"
+                            loading="lazy"
                           />
                         </div>
                       )}
@@ -679,14 +684,14 @@ export default async function HomePage() {
                     rel="noopener noreferrer" 
                     className="block w-full"
                   >
-                    <Image 
+                    <OptimizedImage 
                       src="https://lh3.googleusercontent.com/d/12g3IJugKxAG0pt9KlYVXBOjbBVmNVR06=w1920?authuser=0" 
-                      alt="Advertisement" 
                       width={728}
                       height={90}
+                      alt="Advertisement"
+                      objectFit="contain"
+                      loading="lazy"
                       className="w-full h-auto rounded"
-                      unoptimized
-                      style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
                     />
                   </a>
                 </div>
@@ -829,7 +834,7 @@ export default async function HomePage() {
 
 
         {/* Empty state */}
-        {articles.length === 0 && (
+        {allArticles.length === 0 && (
           <div className="text-center py-20">
             <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gray-100 flex items-center justify-center">
               <Newspaper className="w-12 h-12 text-gray-400" />

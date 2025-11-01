@@ -987,37 +987,25 @@ async function getRandomCategoryArticles(
   count: number = 2
 ): Promise<Array<{ slug: string; title: string }>> {
   try {
-    const { supabaseAdmin } = await import('@/lib/supabase/server');
+    // Use cached function for better performance
+    const { getArticlesByCategoryCached } = await import('@/lib/api/articles-cache');
     
     if (!category) {
       return [];
     }
 
-    // Get articles from same category
-    const { data: articles, error } = await supabaseAdmin
-      .from('articles')
-      .select('slug, title')
-      .eq('published', true)
-      .eq('category', category)
-      .neq('slug', excludeSlug)
-      .order('created_at', { ascending: false })
-      .limit(count * 5); // Get more to randomize
+    // Get articles from same category (cached)
+    const articles = await getArticlesByCategoryCached(category, true);
 
-    if (error) {
-      console.error('❌ Error finding category articles:', error);
-      return [];
-    }
+    // Filter out current article and randomize
+    const filtered = articles
+      .filter(article => article.slug !== excludeSlug)
+      .map(article => ({ slug: article.slug, title: article.title }))
+      .sort(() => Math.random() - 0.5)
+      .slice(0, count);
 
-    if (!articles || articles.length === 0) {
-      return [];
-    }
-
-    // Randomize and select
-    const shuffled = [...articles].sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, count);
-
-    console.log(`📚 Found ${selected.length} random articles from category "${category}"`);
-    return selected;
+    console.log(`📚 Found ${filtered.length} random articles from category "${category}"`);
+    return filtered;
   } catch (error) {
     console.error('❌ Error in getRandomCategoryArticles:', error);
     return [];
@@ -1137,15 +1125,15 @@ function addRelatedArticleBlocks(
 }
 
 /**
- * Main function: Add internal linking to article content
- * Now uses: Fixed links (homepage, category, self) + "Xem thêm" blocks
+ * Main function: Add "Xem thêm" blocks to article content
+ * NO AUTO-LINKING - Only adds "Xem thêm" blocks with random articles from same category
  * @param content - Original markdown content
  * @param title - Article title
  * @param articleId - Current article ID (or slug)
  * @param tags - Article tags (keywords from AI or manual input)
  * @param category - Article category
  * @param articleSlug - Article slug for self-link
- * @returns Modified content with internal links
+ * @returns Modified content with "Xem thêm" blocks
  */
 export async function addKeywordLinks(
   content: string,
@@ -1156,35 +1144,14 @@ export async function addKeywordLinks(
   articleSlug?: string
 ): Promise<string> {
   try {
-    console.log('🔗 Adding internal links (fixed links + "Xem thêm" blocks)...');
+    console.log('📚 Adding "Xem thêm" blocks...');
 
-    // Get main keyword for self-link (simple extraction)
-    const mainKeyword = getMainKeyword(title, tags);
-    
-    console.log(`📝 Main keyword: "${mainKeyword}"`);
-    console.log(`📁 Category: "${category || 'N/A'}"`);
-    console.log(`🔗 Article slug: "${articleSlug || articleId}"`);
-
-    // Convert category to slug
-    const categorySlug = category ? categoryToSlug(category) : 'cong-nghe';
     const finalArticleSlug = articleSlug || articleId.replace('temp-', '');
 
-    // Step 1: Add fixed links (homepage, category, self)
-    let modifiedContent = addFixedLinks(
-      content,
-      category || 'Tin tức',
-      categorySlug,
-      mainKeyword,
-      finalArticleSlug
-    );
-
-    const fixedLinksCount = (modifiedContent.match(/\[.+?\]\([\/\w-]+\)/g) || []).length - 
-                           (content.match(/\[.+?\]\([\/\w-]+\)/g) || []).length;
-    
-    console.log(`✅ Added ${fixedLinksCount} fixed links (homepage, category, self)`);
-
-    // Step 2: Add "Xem thêm" blocks with random articles from same category
+    // Add "Xem thêm" blocks with random articles from same category
     if (category && content.length > 300) { // Only if content is substantial
+      console.log(`📁 Category: "${category}"`);
+      console.log(`🔗 Article slug: "${finalArticleSlug}"`);
       console.log('📚 Getting random articles from same category...');
       
       const relatedArticles = await getRandomCategoryArticles(
@@ -1194,17 +1161,19 @@ export async function addKeywordLinks(
       );
       
       if (relatedArticles.length > 0) {
-        modifiedContent = addRelatedArticleBlocks(
-          modifiedContent,
+        const modifiedContent = addRelatedArticleBlocks(
+          content,
           relatedArticles
         );
         console.log(`✅ Added ${relatedArticles.length} "Xem thêm" blocks`);
+        return modifiedContent;
       } else {
         console.log('⚠️ No related articles found in same category');
       }
     }
 
-    return modifiedContent;
+    // Return original content if no category or no related articles
+    return content;
   } catch (error) {
     console.error('❌ Error in addKeywordLinks:', error);
     return content; // Return original content on error
