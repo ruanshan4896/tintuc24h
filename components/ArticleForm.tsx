@@ -190,12 +190,13 @@ export default function ArticleForm({ initialData, onSubmit, loading }: ArticleF
             onChange={handleChange}
             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           >
-            <option value="Công nghệ">Công nghệ</option>
-            <option value="Thể thao">Thể thao</option>
-            <option value="Sức khỏe">Sức khỏe</option>
-            <option value="Ô tô">Ô tô</option>
-            <option value="Giải trí">Giải trí</option>
-            <option value="Game">Game</option>
+            <option value="Công nghệ">Ctrl Z Công Nghệ</option>
+            <option value="Thể thao">Ctrl Z Thể Thao</option>
+            <option value="Sức khỏe">Ctrl Z Sức Khỏe</option>
+            <option value="Ô tô">Ctrl Z Xe</option>
+            <option value="Giải trí">Ctrl Z Showbiz</option>
+            <option value="Game">Ctrl Z Game</option>
+            <option value="Tin Nóng">Ctrl Z Tin Nóng</option>
           </select>
         </div>
 

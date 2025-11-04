@@ -1,4 +1,8 @@
+'use client';
+
 export default function Footer() {
+  const year = new Date().getFullYear();
+  
   return (
     <footer className="bg-gray-900 text-white mt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -39,7 +43,7 @@ export default function Footer() {
         {/* Copyright */}
         <div className="border-t border-gray-800 mt-8 pt-6 text-center">
           <p className="text-sm text-gray-500">
-            &copy; {new Date().getFullYear()} Ctrl Z - Hoàn tác tin giả, Khôi phục sự thật. All rights reserved.
+            © {year} Ctrl Z. Tất cả quyền được bảo lưu.
           </p>
         </div>
       </div>

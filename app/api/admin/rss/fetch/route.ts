@@ -13,7 +13,22 @@ export const maxDuration = 60; // seconds
 const parser = new Parser({
   timeout: 30000, // 30 seconds for RSS parsing
   headers: {
-    'User-Agent': 'Mozilla/5.0 (compatible; NewsAggregator/1.0)',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*',
+    'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
+  },
+  // Enable custom fields to handle various feed formats
+  customFields: {
+    item: [
+      ['content:encoded', 'content'],
+      ['description', 'description'],
+      ['summary', 'summary'],
+      ['guid', 'guid'],
+      ['link', 'link'],
+      ['pubDate', 'pubDate'],
+      ['published', 'published'],
+      ['updated', 'updated'],
+    ],
   },
 });
 
@@ -314,9 +329,266 @@ export async function POST(request: NextRequest) {
     // Fetch RSS feed
     let rssFeed;
     try {
-      rssFeed = await parser.parseURL(feed.url);
+      console.log(`📡 Fetching RSS feed from: ${feed.url}`);
+      
+      // Try to parse the feed with rss-parser
+      try {
+        rssFeed = await parser.parseURL(feed.url);
+      } catch (parseError: any) {
+        // If parser fails, try fetching directly and parsing manually
+        if (parseError.message?.includes('not recognized as RSS 1 or 2') || 
+            parseError.message?.includes('Feed not recognized')) {
+          console.warn('⚠️ RSS parser failed, trying direct fetch with manual parse...');
+          
+          // Fetch feed content directly with redirect handling
+          const response = await fetch(feed.url, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*',
+              'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
+              'Referer': feed.url,
+              'Cache-Control': 'no-cache',
+            },
+            redirect: 'follow', // Follow redirects
+            signal: AbortSignal.timeout(30000),
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          const feedContent = await response.text();
+          const contentType = response.headers.get('content-type') || '';
+          const trimmedContent = feedContent.trim();
+          
+          console.log(`📄 Response Content-Type: ${contentType}`);
+          console.log(`📄 Response preview (first 500 chars): ${trimmedContent.substring(0, 500)}`);
+          
+          // Check if it's actually XML/RSS
+          const isXml = trimmedContent.startsWith('<?xml');
+          const isRss = trimmedContent.includes('<rss') || trimmedContent.includes('<channel');
+          const isAtom = trimmedContent.includes('<feed') || trimmedContent.includes('<atom:feed');
+          const isHtml = trimmedContent.startsWith('<!DOCTYPE') || trimmedContent.startsWith('<html');
+          
+          if (isHtml) {
+            console.warn('⚠️ Response is HTML, not RSS/XML. May need different approach.');
+            
+            // Try multiple strategies to find RSS feed
+            
+            // Strategy 1: Extract RSS feed URL from HTML (meta tags, links, etc.)
+            const rssLinkMatch = feedContent.match(/<link[^>]*type=["']application\/rss\+xml["'][^>]*href=["']([^"']+)["']/i) ||
+                                 feedContent.match(/<link[^>]*href=["']([^"']+)["'][^>]*type=["']application\/rss\+xml["']/i) ||
+                                 feedContent.match(/<link[^>]*rel=["']alternate["'][^>]*type=["']application\/rss\+xml["'][^>]*href=["']([^"']+)["']/i) ||
+                                 feedContent.match(/<link[^>]*href=["']([^"']+\.rss[^"']*)["'][^>]*/i);
+            
+            let alternateUrls: string[] = [];
+            
+            // Strategy 2: Try common RSS feed URL patterns
+            const urlObj = new URL(feed.url);
+            const baseUrl = `${urlObj.protocol}//${urlObj.host}`;
+            const pathParts = urlObj.pathname.split('/').filter(p => p);
+            
+            // Common RSS patterns to try
+            const commonPatterns = [
+              `${baseUrl}/rss.xml`,
+              `${baseUrl}/feed.xml`,
+              `${baseUrl}/feed`,
+              `${baseUrl}/rss`,
+              `${baseUrl}/feeds/all.rss`,
+              feed.url.replace('.rss', '/feed'),
+              feed.url.replace('/rss/', '/feed/'),
+            ];
+            
+            // Vietnamese news sites specific patterns
+            if (baseUrl.includes('.vn')) {
+              commonPatterns.push(
+                `${baseUrl}/index.rss`,
+                `${baseUrl}/tin-moi.rss`,
+                `${baseUrl}/rss-feed.xml`,
+              );
+            }
+            
+            if (pathParts.length > 0) {
+              const category = pathParts[pathParts.length - 1].replace('.rss', '');
+              
+              // Standard patterns
+              commonPatterns.push(
+                `${baseUrl}/rss/${category}`,
+                `${baseUrl}/feed/${category}`,
+                `${baseUrl}/rss/${category}.xml`,
+                `${baseUrl}/feed/${category}.xml`,
+              );
+              
+              // Try without .rss extension
+              const categoryWithoutRss = category.replace(/\.rss$/, '');
+              if (categoryWithoutRss !== category) {
+                commonPatterns.push(
+                  `${baseUrl}/rss/${categoryWithoutRss}`,
+                  `${baseUrl}/feed/${categoryWithoutRss}`,
+                );
+              }
+              
+              // Try category at root level
+              if (pathParts.length >= 2) {
+                const categoryPath = pathParts[pathParts.length - 2];
+                commonPatterns.push(
+                  `${baseUrl}/${categoryPath}/rss`,
+                  `${baseUrl}/${categoryPath}/feed`,
+                );
+              }
+            }
+            
+            // Add found RSS link to alternatives
+            if (rssLinkMatch && rssLinkMatch[1]) {
+              let foundUrl = rssLinkMatch[1];
+              // Convert relative URL to absolute
+              if (foundUrl.startsWith('/')) {
+                foundUrl = `${baseUrl}${foundUrl}`;
+              } else if (!foundUrl.startsWith('http')) {
+                foundUrl = `${baseUrl}/${foundUrl}`;
+              }
+              alternateUrls.push(foundUrl);
+              console.log(`🔗 Found RSS URL in HTML: ${foundUrl}`);
+            }
+            
+            // Add common patterns
+            alternateUrls.push(...commonPatterns);
+            
+            // Try each alternate URL
+            let success = false;
+            const failedUrls: Array<{ url: string; status?: number; reason: string }> = [];
+            
+            for (const alternateUrl of alternateUrls) {
+              if (alternateUrl === feed.url) continue; // Skip original URL
+              
+              try {
+                console.log(`🔍 Trying alternate RSS URL: ${alternateUrl}`);
+                
+                const altResponse = await fetch(alternateUrl, {
+                  headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*',
+                    'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
+                    'Referer': feed.url,
+                    'Cache-Control': 'no-cache',
+                  },
+                  redirect: 'follow',
+                  signal: AbortSignal.timeout(15000), // Shorter timeout for alternatives
+                });
+                
+                if (altResponse.ok) {
+                  const altContent = await altResponse.text();
+                  const altTrimmed = altContent.trim();
+                  const contentType = altResponse.headers.get('content-type') || '';
+                  
+                  console.log(`📄 Alternate URL ${alternateUrl}: Content-Type=${contentType}, Length=${altContent.length}, Preview=${altTrimmed.substring(0, 200)}`);
+                  
+                  // Check if it's valid XML/RSS/Atom
+                  // More thorough check - also check content-type header
+                  const hasXmlDeclaration = altTrimmed.startsWith('<?xml');
+                  const hasRssTags = altTrimmed.includes('<rss') || altTrimmed.includes('<channel');
+                  const hasAtomTags = altTrimmed.includes('<feed') || altTrimmed.includes('<atom:feed');
+                  const hasXmlContentType = contentType.includes('xml') || 
+                                            contentType.includes('rss') || 
+                                            contentType.includes('atom') ||
+                                            contentType.includes('application/xml') ||
+                                            contentType.includes('text/xml');
+                  
+                  // Also check if content looks like HTML (common false positive)
+                  const looksLikeHtml = altTrimmed.startsWith('<!DOCTYPE') || 
+                                       altTrimmed.startsWith('<html') ||
+                                       (contentType.includes('html') && !hasXmlContentType);
+                  
+                  const looksLikeXml = (hasXmlDeclaration || hasRssTags || hasAtomTags || hasXmlContentType) && !looksLikeHtml;
+                  
+                  if (looksLikeXml) {
+                    try {
+                      rssFeed = await parser.parseString(altContent);
+                      console.log(`✅ Successfully parsed feed from alternate URL: ${alternateUrl}`);
+                      success = true;
+                      break; // Success! Exit loop
+                    } catch (parseErr: any) {
+                      console.warn(`⚠️ Failed to parse alternate URL ${alternateUrl}:`, parseErr.message);
+                      failedUrls.push({ url: alternateUrl, status: altResponse.status, reason: `Parse error: ${parseErr.message}` });
+                      continue; // Try next URL
+                    }
+                  } else {
+                    failedUrls.push({ url: alternateUrl, status: altResponse.status, reason: 'Not XML/RSS/Atom format' });
+                    console.warn(`⚠️ Alternate URL ${alternateUrl} returned non-XML content (${contentType})`);
+                  }
+                } else {
+                  failedUrls.push({ url: alternateUrl, status: altResponse.status, reason: `HTTP ${altResponse.status}` });
+                  console.warn(`⚠️ Alternate URL ${alternateUrl} returned ${altResponse.status}`);
+                }
+              } catch (altError: any) {
+                failedUrls.push({ url: alternateUrl, reason: altError.message || 'Network error' });
+                console.warn(`⚠️ Alternate URL ${alternateUrl} failed:`, altError.message);
+                continue;
+              }
+            }
+            
+            if (!success) {
+              const failedDetails = failedUrls.slice(0, 5).map(f => `- ${f.url}: ${f.reason}${f.status ? ` (${f.status})` : ''}`).join('\n');
+              const moreInfo = failedUrls.length > 5 ? `\n... and ${failedUrls.length - 5} more attempts` : '';
+              
+              throw new Error(
+                `RSS feed not found. Tried ${alternateUrls.length} URLs including:\n${failedDetails}${moreInfo}\n\n` +
+                `Possible reasons:\n` +
+                `1. RSS feed URL may be incorrect - please verify the URL is correct\n` +
+                `2. RSS feed may not be available on this website\n` +
+                `3. Server may require authentication or special headers\n` +
+                `4. RSS feed format may be non-standard and not supported\n\n` +
+                `Please check the RSS feed URL or contact the website administrator.`
+              );
+            }
+          } else if (!isXml && !isRss && !isAtom) {
+            // Not XML, RSS, Atom, or HTML - probably error or wrong content
+            throw new Error('Response is not a valid XML/RSS/Atom feed');
+          } else {
+            // It's XML/RSS/Atom, try parsing
+            // Try parsing with rss-parser from string
+            try {
+              rssFeed = await parser.parseString(feedContent);
+              console.log('✅ Successfully parsed feed from string');
+            } catch (stringParseError: any) {
+              console.warn('⚠️ String parse failed:', stringParseError.message);
+              // Log first few lines for debugging
+              console.log('📄 Feed content preview:', trimmedContent.substring(0, 1000));
+              throw parseError; // Re-throw original error
+            }
+          }
+        } else {
+          throw parseError; // Re-throw if not a format recognition error
+        }
+      }
+      
+      if (!rssFeed || !rssFeed.items || rssFeed.items.length === 0) {
+        throw new Error('RSS feed is empty or has no items');
+      }
+      
+      console.log(`✅ Successfully parsed RSS feed: ${rssFeed.items.length} items found`);
     } catch (error: any) {
-      result.errors.push(`Failed to fetch RSS: ${error.message}`);
+      console.error('❌ RSS fetch error:', error);
+      
+      // Provide more detailed error message
+      let errorMessage = 'Failed to fetch RSS feed';
+      
+      if (error.message?.includes('not recognized as RSS 1 or 2') || 
+          error.message?.includes('Feed not recognized')) {
+        errorMessage = `Feed format not supported. The feed may be invalid or use an unsupported format. Please check the URL: ${feed.url}`;
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = `Timeout while fetching RSS feed. Server may be too slow: ${feed.url}`;
+      } else if (error.message?.includes('ENOTFOUND') || error.message?.includes('getaddrinfo')) {
+        errorMessage = `Cannot resolve hostname. Check if URL is correct: ${feed.url}`;
+      } else if (error.message?.includes('404')) {
+        errorMessage = `RSS feed not found (404). URL may be incorrect: ${feed.url}`;
+      } else if (error.message?.includes('not a valid XML/RSS/Atom feed')) {
+        errorMessage = `The URL does not return a valid RSS/Atom feed. It may return HTML or other content: ${feed.url}`;
+      } else if (error.message) {
+        errorMessage = `Failed to fetch RSS: ${error.message}`;
+      }
+      
+      result.errors.push(errorMessage);
       return NextResponse.json(result, { status: 500 });
     }
 
@@ -528,12 +800,14 @@ export async function POST(request: NextRequest) {
               let contentOffset = 0;
               
               // Distribute images evenly across headings
+              // If we have more images than headings, reuse heading positions
               const insertPositions: number[] = [];
-              const maxInserts = Math.min(imagesToInsert.length, headingMatches.length);
+              const totalImages = imagesToInsert.length;
               
-              for (let i = 0; i < maxInserts; i++) {
-                const headingIndex = Math.floor((headingMatches.length - 1) * i / Math.max(1, maxInserts - 1));
-                insertPositions.push(headingIndex);
+              for (let i = 0; i < totalImages; i++) {
+                // Distribute across headings, wrapping if needed
+                const headingIdx = i % headingMatches.length;
+                insertPositions.push(headingIdx);
               }
               
               // Insert from end to start (reverse order)
@@ -550,18 +824,29 @@ export async function POST(request: NextRequest) {
               const paragraphs = finalContent.split(/\n\n/);
               
               // Distribute images evenly throughout content
-              const interval = Math.max(1, Math.floor(paragraphs.length / (imageMarkdowns.length + 1)));
+              // Ensure all images are inserted even if few paragraphs
+              const totalImages = imageMarkdowns.length;
+              const totalParagraphs = paragraphs.length;
               
-              // Insert from end to start to avoid index shifting
-              for (let i = imageMarkdowns.length - 1; i >= 0; i--) {
-                const insertIndex = interval * (i + 1);
-                if (insertIndex < paragraphs.length) {
+              if (totalParagraphs > 1) {
+                // Calculate interval to distribute evenly
+                const interval = Math.max(1, Math.floor(totalParagraphs / (totalImages + 1)));
+                
+                // Insert from end to start to avoid index shifting
+                for (let i = totalImages - 1; i >= 0; i--) {
+                  const insertIndex = Math.min(interval * (i + 1), totalParagraphs - 1);
                   paragraphs[insertIndex] = imageMarkdowns[i] + '\n\n' + paragraphs[insertIndex];
                   console.log(`✅ Inserted image ${i + 1} between paragraphs at position ${insertIndex}`);
                 }
+                
+                finalContent = paragraphs.join('\n\n');
+              } else {
+                // Very few paragraphs - insert all images at the end of first paragraph
+                const allImages = imageMarkdowns.join('\n\n');
+                paragraphs[0] = paragraphs[0] + '\n\n' + allImages;
+                finalContent = paragraphs.join('\n\n');
+                console.log(`✅ Inserted ${totalImages} images after first paragraph`);
               }
-              
-              finalContent = paragraphs.join('\n\n');
             }
           }
         } else {

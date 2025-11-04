@@ -13,6 +13,27 @@ import Breadcrumb from '@/components/Breadcrumb';
 import { getCategorySlug, toSlug } from '@/lib/utils/slug';
 import { getCardBgClasses } from '@/lib/utils/card-colors';
 import { Gift } from 'lucide-react';
+import { getCategoryDisplayName } from '@/lib/constants';
+
+// Helper functions for image proxy
+function needsProxy(url: string): boolean {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+    return hostname.includes('.vnecdn.net') || 
+           hostname.includes('.vnexpress.net') ||
+           hostname === 'vnexpress.net';
+  } catch {
+    return false;
+  }
+}
+
+function getProxyUrl(url: string): string {
+  if (needsProxy(url)) {
+    return `/api/image-proxy?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
 
 interface ArticlePageProps {
   params: Promise<{
@@ -72,7 +93,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
         url: articleUrl,
         images: article.image_url ? [
           {
-            url: article.image_url,
+            url: needsProxy(article.image_url) ? getProxyUrl(article.image_url) : article.image_url,
             width: 1200,
             height: 630,
             alt: article.title,
@@ -85,7 +106,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
         card: 'summary_large_image',
         title: article.title,
         description: enhancedDescription,
-        images: article.image_url ? [article.image_url] : [],
+        images: article.image_url ? [needsProxy(article.image_url) ? getProxyUrl(article.image_url) : article.image_url] : [],
       },
       other: {
         'article:published_time': article.created_at,
@@ -195,10 +216,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       
       <article className="bg-transparent">
         {/* Breadcrumb */}
-        <Breadcrumb
+          <Breadcrumb
           items={[
             { label: 'Trang chủ', href: '/' },
-            { label: article.category, href: `/category/${getCategorySlug(article.category)}` },
+            { label: getCategoryDisplayName(article.category), href: `/category/${getCategorySlug(article.category)}` },
             { label: article.title },
           ]}
         />
@@ -212,7 +233,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               <header className="mb-8">
                 <div className="flex items-center gap-3 mb-4">
                   <span className="px-4 py-1 bg-blue-100 text-blue-600 text-sm font-semibold rounded-full">
-                    {article.category}
+                    {getCategoryDisplayName(article.category)}
                   </span>
                   <span className="text-gray-500 text-sm">{article.views} lượt xem</span>
                 </div>

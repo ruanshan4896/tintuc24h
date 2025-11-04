@@ -244,10 +244,10 @@ Bài gốc: "Theo nghiên cứu của WHO năm 2024, ô nhiễm không khí ở 
 - Headings mô tả rõ nội dung phần đó
 
 **Hình Ảnh Minh Họa (CRITICAL!):**
-- Chèn ĐÚNG 1 placeholder hình ảnh vào giữa bài viết
-- Format: [IMAGE_PLACEHOLDER_1]
-- Đặt sau heading đầu tiên (##) hoặc giữa các đoạn quan trọng
-- KHÔNG đặt ở đầu bài (trước heading đầu) hoặc cuối bài
+- Chèn ĐÚNG 3 placeholders hình ảnh vào giữa bài viết
+- Format: [IMAGE_PLACEHOLDER_1], [IMAGE_PLACEHOLDER_2], [IMAGE_PLACEHOLDER_3]
+- Phân bố đều trong bài viết: sau heading đầu, giữa các phần nội dung chính, trước heading cuối
+- KHÔNG đặt ở đầu bài (trước heading đầu) hoặc cuối bài (sau heading cuối)
 - VÍ DỤ vị trí chèn:
 
 \`\`\`
@@ -260,6 +260,14 @@ Bài gốc: "Theo nghiên cứu của WHO năm 2024, ô nhiễm không khí ở 
 ## Phân Tích Chi Tiết
 
 Nội dung chi tiết về vấn đề...
+
+[IMAGE_PLACEHOLDER_2]
+
+## Giải Pháp
+
+Nội dung về giải pháp...
+
+[IMAGE_PLACEHOLDER_3]
 
 ## Kết Luận
 
@@ -396,7 +404,7 @@ TAGS: [tag1, tag2, tag3, tag4, tag5]
   - Ví dụ: [iphone 15, smartphone, review, công nghệ, mua sắm]
   - KHÔNG dùng hashtag (#)
   
-- Đặt ở CUỐI CÙNG của bài viết (sau [IMAGE_PLACEHOLDER_1] nếu có)
+- Đặt ở CUỐI CÙNG của bài viết (sau [IMAGE_PLACEHOLDER_3] nếu có)
 
 **VÍ DỤ:**
 \`\`\`

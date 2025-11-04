@@ -7,24 +7,29 @@ import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toSlug } from '@/lib/utils/slug';
 import { getCardBgClasses } from '@/lib/utils/card-colors';
+import { getCategoryDisplayName } from '@/lib/constants';
 
 interface ArticleCardProps {
   article: Article;
+  priority?: boolean; // Add priority prop for above-the-fold images
 }
 
-export default function ArticleCard({ article }: ArticleCardProps) {
+export default function ArticleCard({ article, priority = false }: ArticleCardProps) {
+  
   return (
     <article className={`${getCardBgClasses(article.id)} rounded-xl shadow-lg overflow-hidden hover:shadow-2xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 border border-gray-200/50`}>
       <Link href={`/articles/${article.slug}`}>
         {article.image_url && (
-          <div className="relative h-48 w-full">
+          <div className="relative h-48 w-full bg-gray-100">
             <OptimizedImage
               src={article.image_url}
               alt={article.title}
               fill
-              className="object-cover"
+              className="object-cover transition-opacity duration-300"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              loading="lazy"
+              loading={priority ? 'eager' : 'lazy'}
+              priority={priority}
+              quality={80}
               objectFit="cover"
             />
           </div>
@@ -34,7 +39,7 @@ export default function ArticleCard({ article }: ArticleCardProps) {
       <div className="p-6">
         <div className="flex items-center gap-2 mb-3">
           <span className="px-3 py-1 bg-blue-100 text-blue-600 text-xs font-semibold rounded-full">
-            {article.category}
+            {getCategoryDisplayName(article.category)}
           </span>
           <span className="text-gray-500 text-sm">
             {article.views} lượt xem

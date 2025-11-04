@@ -25,6 +25,8 @@ export const categoryToSlug: { [key: string]: string } = {
   'Sức khỏe': 'suc-khoe',
   'Ô tô': 'o-to',
   'Giải trí': 'giai-tri',
+  'Game': 'game',
+  'Tin Nóng': 'tin-nong',
   'Kinh doanh': 'kinh-doanh',
   'Du lịch': 'du-lich',
   'Giáo dục': 'giao-duc',

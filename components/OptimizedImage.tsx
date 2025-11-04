@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef, memo } from 'react';
 import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
 
@@ -24,7 +24,34 @@ interface OptimizedImageProps {
 
 const DEFAULT_FALLBACK = '/og-image.jpg'; // Default fallback image
 
-export default function OptimizedImage({
+/**
+ * Check if image URL is from vnexpress and needs proxy
+ * Supports all vnexpress subdomains: *.vnexpress.net, *.vnecdn.net
+ */
+function needsProxy(url: string): boolean {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+    // Match all vnexpress subdomains: i1-thethao.vnecdn.net, i2-vnexpress.vnecdn.net, etc.
+    return hostname.includes('.vnecdn.net') || 
+           hostname.includes('.vnexpress.net') ||
+           hostname === 'vnexpress.net';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Convert image URL to proxy URL if needed
+ */
+function getProxyUrl(url: string): string {
+  if (needsProxy(url)) {
+    return `/api/image-proxy?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
+function OptimizedImage({
   src,
   alt,
   width,
@@ -37,31 +64,57 @@ export default function OptimizedImage({
   quality = 75,
   objectFit = 'cover',
   fallbackSrc = DEFAULT_FALLBACK,
-  retryCount = 3,
+  retryCount = 1, // Reduce retry to 1 to avoid too many reloads
   onError,
   inline = false,
 }: OptimizedImageProps) {
-  const [imgSrc, setImgSrc] = useState(src);
+  // Memoize proxy URL to avoid recalculating on every render
+  const proxiedSrc = useMemo(() => {
+    return needsProxy(src) ? getProxyUrl(src) : src;
+  }, [src]);
+  
+  const [imgSrc, setImgSrc] = useState(proxiedSrc);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [retryAttempts, setRetryAttempts] = useState(0);
+  const hasLoadedRef = useRef(false); // Track if image has successfully loaded before
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleError = () => {
-    console.warn(`⚠️ Image failed to load: ${imgSrc}`);
+    // Only log errors in development
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`⚠️ Image failed to load: ${imgSrc}`);
+    }
+    
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    
+    // Don't retry if we've already loaded successfully before
+    if (hasLoadedRef.current) {
+      setIsLoading(false);
+      return;
+    }
     
     if (retryAttempts < retryCount && imgSrc !== fallbackSrc) {
-      // Retry with backoff
-      const delay = Math.min(1000 * Math.pow(2, retryAttempts), 5000);
-      setTimeout(() => {
-        console.log(`🔄 Retrying image load (attempt ${retryAttempts + 1}/${retryCount})...`);
+      // Retry once with minimal delay
+      const delay = 500; // Reduced delay
+      timeoutRef.current = setTimeout(() => {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🔄 Retrying image load (attempt ${retryAttempts + 1}/${retryCount})...`);
+        }
         setRetryAttempts(prev => prev + 1);
-        // Force reload by updating src with cache buster
-        setImgSrc(`${src}?retry=${retryAttempts + 1}&t=${Date.now()}`);
+        // Don't use cache buster - let browser cache work
+        setImgSrc(proxiedSrc);
         setIsLoading(true);
       }, delay);
     } else if (imgSrc !== fallbackSrc) {
-      // Switch to fallback
-      console.log(`🔄 Switching to fallback image: ${fallbackSrc}`);
+      // Switch to fallback - only once
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🔄 Switching to fallback image: ${fallbackSrc}`);
+      }
       setImgSrc(fallbackSrc);
       setIsLoading(true);
       setHasError(true);
@@ -76,85 +129,54 @@ export default function OptimizedImage({
   };
 
   const handleLoad = () => {
-    console.log(`✅ Image loaded successfully: ${imgSrc}`);
+    // Mark as successfully loaded
+    hasLoadedRef.current = true;
     setIsLoading(false);
     setHasError(false);
+    
+    // Clear any pending timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
   };
   
   // Enhanced error handler for Image component
   const handleImageError = () => {
     handleError();
   };
-  
-  // Check if image loaded successfully after a delay (fallback for onLoad not firing)
-  useEffect(() => {
-    if (!isLoading || typeof window === 'undefined') return;
-    
-    // If still loading after 3 seconds, check if image element exists and loaded
-    const checkTimeout = setTimeout(() => {
-      try {
-        // Try to find the Next.js Image component's underlying img element
-        const imgs = document.querySelectorAll('img');
-        const foundImg = Array.from(imgs).find(img => 
-          img.src.includes(imgSrc.split('?')[0]) || 
-          img.getAttribute('src')?.includes(imgSrc.split('?')[0])
-        );
-        
-        if (foundImg && (foundImg as HTMLImageElement).complete && (foundImg as HTMLImageElement).naturalHeight > 0) {
-          console.log(`✅ Image loaded (detected via DOM check): ${imgSrc}`);
-          setIsLoading(false);
-          setHasError(false);
-        }
-      } catch (e) {
-        // Silent fail for DOM check
-      }
-    }, 3000); // Check after 3 seconds
-    
-    return () => clearTimeout(checkTimeout);
-  }, [isLoading, imgSrc]);
 
-  // Reset when src changes
+  // Reset when src changes - only if it's actually different
   useEffect(() => {
-    setImgSrc(src);
-    setIsLoading(true);
-    setHasError(false);
-    setRetryAttempts(0);
+    // Only update if the proxied src is different
+    if (imgSrc !== proxiedSrc && imgSrc !== fallbackSrc) {
+      setImgSrc(proxiedSrc);
+      setIsLoading(true);
+      setHasError(false);
+      setRetryAttempts(0);
+      hasLoadedRef.current = false; // Reset loaded state for new image
+      
+      // Set timeout for new image
+      timeoutRef.current = setTimeout(() => {
+        setIsLoading(prev => {
+          if (prev && !hasLoadedRef.current) {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn(`⏱️ Image load timeout (4s) for: ${src}`);
+            }
+            handleError();
+          }
+          return prev;
+        });
+      }, 4000); // 4 second timeout
+    }
     
-    // Timeout fallback: if image doesn't load within 8 seconds, show error
-    const timeoutId = setTimeout(() => {
-      console.warn(`⏱️ Image load timeout (8s) for: ${src}`);
-      setIsLoading(prev => {
-        if (prev) {
-          // Still loading after timeout, trigger error handling
-          handleError();
-        }
-        return false;
-      });
-    }, 8000); // 8 second timeout (reduced for faster fallback)
-    
-    return () => clearTimeout(timeoutId);
-  }, [src]);
-  
-  // Additional absolute timeout check when component is loading
-  useEffect(() => {
-    if (!isLoading) return;
-    
-    const timeoutId = setTimeout(() => {
-      console.warn(`⏱️ Image still loading after 12s absolute timeout: ${imgSrc}`);
-      // Force stop loading and try fallback
-      setIsLoading(false);
-      if (imgSrc !== fallbackSrc && retryAttempts < retryCount) {
-        handleError();
-      } else {
-        setHasError(true);
-        if (onError) {
-          onError();
-        }
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
       }
-    }, 12000); // 12 second absolute timeout (reduced)
-    
-    return () => clearTimeout(timeoutId);
-  }, [isLoading, imgSrc, fallbackSrc, retryAttempts, retryCount, onError]);
+    };
+  }, [src, proxiedSrc]);
 
   // Build className with object-fit
   const objectFitClass = objectFit === 'cover' ? 'object-cover' :
@@ -189,9 +211,9 @@ export default function OptimizedImage({
           onError={handleImageError}
           onLoad={handleLoad}
           onLoadingComplete={handleLoad} // Additional callback for Next.js Image
-          placeholder="blur"
-          blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQ3NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiLz4="
-          unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('lh3.googleusercontent.com')}
+          placeholder={priority ? "blur" : "empty"}
+          blurDataURL={priority ? "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQ3NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiLz4=" : undefined}
+          unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('lh3.googleusercontent.com') || imgSrc.includes('/api/image-proxy')}
         />
         {hasError && !isLoading && imgSrc === fallbackSrc && (
           <span className="inline-block text-xs text-gray-500 ml-2">Không thể tải ảnh</span>
@@ -203,10 +225,10 @@ export default function OptimizedImage({
   // Use div wrapper for standalone usage
   return (
     <div className={`relative ${fill ? 'w-full h-full' : ''} ${hasError && !isLoading ? 'bg-gray-100' : ''}`}>
-      {/* Loading State */}
-      {isLoading && (
-        <span className="absolute inset-0 flex items-center justify-center bg-gray-100 animate-pulse z-10">
-          <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+      {/* Loading State - Only show spinner for non-priority images */}
+      {isLoading && !priority && (
+        <span className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+          <div className="w-full h-full bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 animate-pulse" />
         </span>
       )}
 
@@ -246,9 +268,9 @@ export default function OptimizedImage({
           onError={handleImageError}
           onLoad={handleLoad}
           onLoadingComplete={handleLoad} // Additional callback for Next.js Image
-          placeholder="blur"
-          blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQ3NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiLz4="
-          unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('lh3.googleusercontent.com')}
+          placeholder={priority ? "blur" : "empty"}
+          blurDataURL={priority ? "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQ3NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiLz4=" : undefined}
+          unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('lh3.googleusercontent.com') || imgSrc.includes('/api/image-proxy')}
         />
       ) : (
         <Image
@@ -264,11 +286,14 @@ export default function OptimizedImage({
           onError={handleImageError}
           onLoad={handleLoad}
           onLoadingComplete={handleLoad} // Additional callback for Next.js Image
-          placeholder="blur"
-          blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQ3NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiLz4="
-          unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('lh3.googleusercontent.com')}
+          placeholder={priority ? "blur" : "empty"}
+          blurDataURL={priority ? "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQ3NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiLz4=" : undefined}
+          unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('lh3.googleusercontent.com') || imgSrc.includes('/api/image-proxy')}
         />
       )}
     </div>
   );
 }
+
+// Memoize component to prevent unnecessary re-renders
+export default memo(OptimizedImage);

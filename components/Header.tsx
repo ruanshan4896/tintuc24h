@@ -1,13 +1,27 @@
 'use client';
 
-import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
+import { CATEGORIES, getCategoryNavName } from '@/lib/constants';
+import { getCategorySlug } from '@/lib/utils/slug';
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
+  const pathname = usePathname();
+  
+  // Category icon mapping
+  const categoryIcons: { [key: string]: string } = {
+    'Công nghệ': '💻',
+    'Thể thao': '⚽',
+    'Sức khỏe': '❤️',
+    'Ô tô': '🚗',
+    'Giải trí': '🎬',
+    'Game': '🎮',
+    'Tin Nóng': '🔥',
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,24 +67,18 @@ export default function Header() {
               <Link href="/" className="text-gray-700 hover:text-blue-600 transition">
                 Trang chủ
               </Link>
-              <Link href="/category/cong-nghe" className="text-gray-700 hover:text-blue-600 transition">
-                Công nghệ
+              <Link href="/category/tin-nong" className="text-gray-700 hover:text-blue-600 transition">
+                Tin Nóng
               </Link>
-              <Link href="/category/the-thao" className="text-gray-700 hover:text-blue-600 transition">
-                Thể thao
-              </Link>
-              <Link href="/category/suc-khoe" className="text-gray-700 hover:text-blue-600 transition">
-                Sức khỏe
-              </Link>
-              <Link href="/category/o-to" className="text-gray-700 hover:text-blue-600 transition">
-                Ô tô
-              </Link>
-              <Link href="/category/giai-tri" className="text-gray-700 hover:text-blue-600 transition">
-                Giải trí
-              </Link>
-              <Link href="/category/game" className="text-gray-700 hover:text-blue-600 transition">
-                Game
-              </Link>
+              {CATEGORIES.filter(cat => cat !== 'Tin Nóng').map((category) => (
+                <Link 
+                  key={category}
+                  href={`/category/${getCategorySlug(category)}`} 
+                  className="text-gray-700 hover:text-blue-600 transition"
+                >
+                  {getCategoryNavName(category)}
+                </Link>
+              ))}
               
               {/* Search */}
               <form onSubmit={handleSearch} className="relative">
@@ -148,54 +156,33 @@ export default function Header() {
             </Link>
 
             <div className="pt-2 pb-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase px-4 mb-2">Chuyên mục</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase px-4 mb-2">
+                Chuyên mục
+              </p>
               <Link
-                href="/category/cong-nghe"
+                href="/category/tin-nong"
                 onClick={() => setMobileMenuOpen(false)}
                 className="text-gray-700 hover:bg-blue-50 hover:text-blue-600 px-4 py-3 rounded-lg transition flex items-center"
               >
-                💻 Công nghệ
+                🔥 Tin Nóng
               </Link>
-              <Link
-                href="/category/the-thao"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-gray-700 hover:bg-blue-50 hover:text-blue-600 px-4 py-3 rounded-lg transition flex items-center"
-              >
-                ⚽ Thể thao
-              </Link>
-              <Link
-                href="/category/suc-khoe"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-gray-700 hover:bg-blue-50 hover:text-blue-600 px-4 py-3 rounded-lg transition flex items-center"
-              >
-                ❤️ Sức khỏe
-              </Link>
-              <Link
-                href="/category/o-to"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-gray-700 hover:bg-blue-50 hover:text-blue-600 px-4 py-3 rounded-lg transition flex items-center"
-              >
-                🚗 Ô tô
-              </Link>
-              <Link
-                href="/category/giai-tri"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-gray-700 hover:bg-blue-50 hover:text-blue-600 px-4 py-3 rounded-lg transition flex items-center"
-              >
-                🎬 Giải trí
-              </Link>
-              <Link
-                href="/category/game"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-gray-700 hover:bg-blue-50 hover:text-blue-600 px-4 py-3 rounded-lg transition flex items-center"
-              >
-                🎮 Game
-              </Link>
+              {CATEGORIES.filter(cat => cat !== 'Tin Nóng').map((category) => (
+                <Link
+                  key={category}
+                  href={`/category/${getCategorySlug(category)}`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-gray-700 hover:bg-blue-50 hover:text-blue-600 px-4 py-3 rounded-lg transition flex items-center"
+                >
+                  {categoryIcons[category] || ''} {getCategoryNavName(category)}
+                </Link>
+              ))}
             </div>
 
             {/* Search */}
             <div className="pt-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase px-4 mb-2">Tìm kiếm</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase px-4 mb-2">
+                Tìm kiếm
+              </p>
               <div className="px-4">
                 <form onSubmit={handleSearch} className="relative">
                   <input

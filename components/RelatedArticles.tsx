@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { Article } from '@/lib/types/article';
 import { format } from 'date-fns';

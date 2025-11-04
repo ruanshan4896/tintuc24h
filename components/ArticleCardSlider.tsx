@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { Clock, Eye } from 'lucide-react';
 import { getCardBgClasses } from '@/lib/utils/card-colors';
+import { getCategoryDisplayName } from '@/lib/constants';
 
 interface ArticleCardSliderProps {
   article: Article;
@@ -22,11 +23,11 @@ export default function ArticleCardSlider({ article, priority = false }: Article
               src={article.image_url}
               alt={article.title}
               fill
-              className="object-cover transition-transform duration-500"
+              className="object-cover transition-opacity duration-300"
               sizes="(max-width: 768px) 300px, 350px"
               loading={priority ? 'eager' : 'lazy'}
               priority={priority}
-              quality={75}
+              quality={80}
               objectFit="cover"
             />
             {/* Gradient overlay */}
@@ -35,7 +36,7 @@ export default function ArticleCardSlider({ article, priority = false }: Article
             {/* Category badge */}
             <div className="absolute top-3 left-3">
               <span className="px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-full shadow-lg">
-                {article.category}
+                {getCategoryDisplayName(article.category)}
               </span>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import { getArticlesByCategoryCached, getPopularTagsCached } from '@/lib/api/articles-cache';
 import Link from 'next/link';
 import OptimizedImage from '@/components/OptimizedImage';
-import { CATEGORIES } from '@/lib/constants';
+import { CATEGORIES, getCategoryDisplayName } from '@/lib/constants';
 import { Newspaper, TrendingUp, Mail, Facebook, Youtube, Twitter, Tag as TagIcon, Gift } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getCardBgClasses } from '@/lib/utils/card-colors';
@@ -13,14 +13,14 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 export const metadata: Metadata = {
   title: 'Trang chủ - Tin tức Ctrl Z',
-  description: 'Tin tức mới nhất về Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí, Game. Ctrl Z - Hoàn tác tin giả, khôi phục sự thật với tin tức minh bạch, đa chiều.',
+  description: 'Tin tức mới nhất về Tin Nóng, Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí, Game. Ctrl Z - Hoàn tác tin giả, khôi phục sự thật với tin tức minh bạch, đa chiều.',
   keywords: ['tin tức', 'news', 'công nghệ', 'thể thao', 'sức khỏe', 'ô tô', 'giải trí', 'game', 'ctrl z', 'tin tức mới nhất'],
   alternates: {
     canonical: '/',
   },
   openGraph: {
     title: 'Ctrl Z - Tin tức mới nhất mỗi ngày',
-    description: 'Cập nhật tin tức nóng hổi từ mọi lĩnh vực: Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí, Game',
+    description: 'Cập nhật tin tức nóng hổi từ mọi lĩnh vực: Tin Nóng, Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí, Game',
     url: '/',
     type: 'website',
   },
@@ -34,6 +34,7 @@ const categoryIcons: Record<string, string> = {
   'Ô tô': '🚗',
   'Giải trí': '🎬',
   'Game': '🎮',
+  'Tin Nóng': '🔥',
 };
 
 // Category slug mapping
@@ -44,6 +45,7 @@ const categorySlugMap: Record<string, string> = {
   'Ô tô': 'o-to',
   'Giải trí': 'giai-tri',
   'Game': 'game',
+  'Tin Nóng': 'tin-nong',
 };
 
 export default async function HomePage() {
@@ -368,7 +370,7 @@ export default async function HomePage() {
           
           {/* Sub-description */}
           <p className="text-base md:text-lg text-blue-200 max-w-3xl mx-auto leading-relaxed mb-8">
-            Tin tức minh bạch, đa chiều từ mọi lĩnh vực: Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí, Game
+            Tin tức minh bạch, đa chiều từ mọi lĩnh vực: Tin Nóng, Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí, Game
           </p>
           
           {/* Quick category links - Centered */}
@@ -379,7 +381,7 @@ export default async function HomePage() {
                 href={`/category/${categorySlugMap[category]}`}
                 className="px-5 py-2.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full text-sm font-semibold transition-all hover:scale-105"
               >
-                {categoryIcons[category]} {category}
+                {categoryIcons[category]} {getCategoryDisplayName(category)}
               </Link>
             ))}
           </div>
@@ -406,7 +408,7 @@ export default async function HomePage() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {featuredArticles.map((article) => (
+              {featuredArticles.map((article, idx) => (
                   <Link
                     key={article.id}
                     href={`/articles/${article.slug}`}
@@ -419,17 +421,19 @@ export default async function HomePage() {
                             src={article.image_url}
                             alt={article.title}
                             fill
-                            className="object-cover transition-transform duration-300"
+                            className="object-cover transition-opacity duration-300"
                             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
                             objectFit="cover"
-                            loading="lazy"
+                            loading={idx < 2 ? "eager" : "lazy"}
+                            priority={idx < 2}
+                            quality={80}
                           />
                         </div>
                       )}
                       <div className="p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-semibold rounded">
-                            {article.category}
+                            {getCategoryDisplayName(article.category)}
                           </span>
                           <span className="text-xs text-gray-500">{article.views} lượt xem</span>
                         </div>
@@ -462,7 +466,7 @@ export default async function HomePage() {
                         <Link href={`/category/${categorySlugMap[item.category]}`} className="flex items-center gap-2 group">
                           <span className="text-2xl">{categoryIcons[item.category]}</span>
                           <h2 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                            {item.category}
+                            {getCategoryDisplayName(item.category)}
                           </h2>
                         </Link>
                         <Link 
@@ -491,18 +495,19 @@ export default async function HomePage() {
                                     src={article.image_url}
                                     alt={article.title}
                                     fill
-                                    className="object-cover transition-transform duration-300"
+                                    className="object-cover transition-opacity duration-300"
                                     sizes={articleIdx === 0 ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 100vw, 33vw"}
                                     objectFit="cover"
                                     loading={articleIdx === 0 ? "eager" : "lazy"}
                                     priority={articleIdx === 0}
+                                    quality={80}
                           />
                                 </div>
                               )}
                               <div className="p-4">
                                 <div className="flex items-center gap-2 mb-2">
                                   <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-semibold rounded">
-                                    {article.category}
+                                    {getCategoryDisplayName(article.category)}
                                   </span>
                                   <span className="text-xs text-gray-500">{article.views} lượt xem</span>
                                 </div>
@@ -542,7 +547,7 @@ export default async function HomePage() {
                       <Link href={`/category/${categorySlugMap[category]}`} className="flex items-center gap-2 group">
                         <span className="text-2xl">{categoryIcons[category]}</span>
                         <h2 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                          {category}
+                          {getCategoryDisplayName(category)}
                         </h2>
                       </Link>
                       <Link 
@@ -574,7 +579,8 @@ export default async function HomePage() {
                                   objectFit="cover"
                                   loading={idx === 0 ? "eager" : "lazy"}
                                   priority={idx === 0}
-                                  className="object-cover transition-transform duration-300"
+                                  quality={80}
+                                  className="object-cover transition-opacity duration-300"
                                   sizes={idx === 0 ? "(max-width: 768px) 100vw, 66vw" : "(max-width: 768px) 100vw, 33vw"}
                                 />
                               </div>
@@ -582,7 +588,7 @@ export default async function HomePage() {
                             <div className="p-4">
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-semibold rounded">
-                                  {article.category}
+                                  {getCategoryDisplayName(article.category)}
                                 </span>
                                 <span className="text-xs text-gray-500">{article.views} lượt xem</span>
                               </div>
@@ -631,7 +637,7 @@ export default async function HomePage() {
                         <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
                           {article.title}
                         </h3>
-                        <span className="text-xs text-gray-500">{article.category}</span>
+                        <span className="text-xs text-gray-500">{getCategoryDisplayName(article.category)}</span>
                       </div>
                     </Link>
                   ))}
@@ -670,7 +676,7 @@ export default async function HomePage() {
                         {article.title}
                       </h3>
                       <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <span className="px-2 py-0.5 bg-gray-100 rounded">{article.category}</span>
+                        <span className="px-2 py-0.5 bg-gray-100 rounded">{getCategoryDisplayName(article.category)}</span>
                       </div>
                     </Link>
                   ))}

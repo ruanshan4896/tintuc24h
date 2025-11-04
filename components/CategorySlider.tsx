@@ -73,7 +73,7 @@ export default function CategorySlider({ category, articles, categorySlug, icon 
           href={`/category/${categorySlug}`}
           className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 group"
         >
-          Xem tất cả
+          Xem thêm
           <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </Link>
       </div>

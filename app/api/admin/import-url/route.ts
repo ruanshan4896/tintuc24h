@@ -450,12 +450,14 @@ export async function POST(request: NextRequest) {
               let contentOffset = 0;
               
               // Distribute images evenly across headings
+              // If we have more images than headings, reuse heading positions
               const insertPositions: number[] = [];
-              const maxInserts = Math.min(imagesToInsert.length, headingMatches.length);
+              const totalImages = imagesToInsert.length;
               
-              for (let i = 0; i < maxInserts; i++) {
-                const headingIndex = Math.floor((headingMatches.length - 1) * i / Math.max(1, maxInserts - 1));
-                insertPositions.push(headingIndex);
+              for (let i = 0; i < totalImages; i++) {
+                // Distribute across headings, wrapping if needed
+                const headingIdx = i % headingMatches.length;
+                insertPositions.push(headingIdx);
               }
               
               // Insert from end to start (reverse order)
@@ -472,18 +474,29 @@ export async function POST(request: NextRequest) {
               const paragraphs = finalContent.split(/\n\n/);
               
               // Distribute images evenly throughout content
-              const interval = Math.max(1, Math.floor(paragraphs.length / (imageMarkdowns.length + 1)));
+              // Ensure all images are inserted even if few paragraphs
+              const totalImages = imageMarkdowns.length;
+              const totalParagraphs = paragraphs.length;
               
-              // Insert from end to start to avoid index shifting
-              for (let i = imageMarkdowns.length - 1; i >= 0; i--) {
-                const insertIndex = interval * (i + 1);
-                if (insertIndex < paragraphs.length) {
+              if (totalParagraphs > 1) {
+                // Calculate interval to distribute evenly
+                const interval = Math.max(1, Math.floor(totalParagraphs / (totalImages + 1)));
+                
+                // Insert from end to start to avoid index shifting
+                for (let i = totalImages - 1; i >= 0; i--) {
+                  const insertIndex = Math.min(interval * (i + 1), totalParagraphs - 1);
                   paragraphs[insertIndex] = imageMarkdowns[i] + '\n\n' + paragraphs[insertIndex];
                   console.log(`✅ Inserted image ${i + 1} between paragraphs at position ${insertIndex}`);
                 }
+                
+                finalContent = paragraphs.join('\n\n');
+              } else {
+                // Very few paragraphs - insert all images at the end of first paragraph
+                const allImages = imageMarkdowns.join('\n\n');
+                paragraphs[0] = paragraphs[0] + '\n\n' + allImages;
+                finalContent = paragraphs.join('\n\n');
+                console.log(`✅ Inserted ${totalImages} images after first paragraph`);
               }
-              
-              finalContent = paragraphs.join('\n\n');
             }
           }
     } else {

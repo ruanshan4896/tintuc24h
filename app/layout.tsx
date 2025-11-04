@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 // Analytics only for production to improve dev performance
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import Script from 'next/script';
 
 // Lazy load Footer to reduce initial bundle
 const Footer = dynamic(() => import('@/components/Footer'), {
@@ -15,7 +16,7 @@ const Footer = dynamic(() => import('@/components/Footer'), {
 
 // Optimize font loading
 const inter = Inter({ 
-  subsets: ['latin', 'vietnamese'],
+  subsets: ['latin', 'latin-ext', 'vietnamese'],
   display: 'swap',
   preload: true,
   fallback: ['system-ui', 'arial'],
@@ -37,11 +38,11 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://tintuc24h-seven.vercel.app'),
   title: {
-    default: 'Ctrl Z - Hoàn tác tin giả, Khôi phục sự thật',
+    default: 'Ctrl Z - Tin tức mới nhất mỗi ngày',
     template: '%s | Ctrl Z'
   },
-  description: 'Ctrl Z - Tin tức minh bạch, đa chiều. Hoàn tác tin giả, khôi phục sự thật. Cập nhật tin tức Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí, Game.',
-  keywords: ['ctrl z', 'tin tức', 'news', 'công nghệ', 'thể thao', 'sức khỏe', 'ô tô', 'giải trí', 'game', 'tin tức minh bạch', 'Vietnam'],
+  description: 'Cập nhật tin tức nóng hổi từ mọi lĩnh vực: Tin Nóng, Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí, Game',
+  keywords: ['tin tức', 'news', 'công nghệ', 'thể thao', 'sức khỏe', 'ô tô', 'giải trí', 'game', 'ctrl z', 'tin tức mới nhất'],
   authors: [{ name: 'Ctrl Z Team' }],
   creator: 'Ctrl Z',
   publisher: 'Ctrl Z',
@@ -55,22 +56,13 @@ export const metadata: Metadata = {
     locale: 'vi_VN',
     url: '/',
     siteName: 'Ctrl Z',
-    title: 'Ctrl Z - Hoàn tác tin giả, Khôi phục sự thật',
-    description: 'Tin tức minh bạch, đa chiều từ mọi lĩnh vực: Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí, Game',
-    images: [
-      {
-        url: '/og-image.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'Ctrl Z',
-      },
-    ],
+    title: 'Ctrl Z - Tin tức mới nhất mỗi ngày',
+    description: 'Cập nhật tin tức nóng hổi từ mọi lĩnh vực: Tin Nóng, Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí, Game',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Ctrl Z - Hoàn tác tin giả, Khôi phục sự thật',
-    description: 'Tin tức minh bạch, đa chiều từ mọi lĩnh vực: Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí, Game',
-    images: ['/og-image.jpg'],
+    title: 'Ctrl Z - Tin tức mới nhất mỗi ngày',
+    description: 'Cập nhật tin tức nóng hổi từ mọi lĩnh vực: Tin Nóng, Công nghệ, Thể thao, Sức khỏe, Ô tô, Giải trí, Game',
   },
   robots: {
     index: true,
@@ -87,6 +79,16 @@ export const metadata: Metadata = {
     google: 'Smfp6CDotxjXnPeit-7Kw41bOvV1McfSzgqwTZDzq3o',
   },
   category: 'news',
+  alternates: {
+    canonical: '/',
+    types: {
+      'application/rss+xml': [{ url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://tintuc24h-seven.vercel.app'}/rss.xml`, title: 'Ctrl Z RSS Feed' }],
+    },
+  },
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({
@@ -104,14 +106,14 @@ export default function RootLayout({
     alternateName: 'Ctrl Z News',
     url: baseUrl,
     logo: `${baseUrl}/og-image.jpg`,
-    description: 'Ctrl Z - Tin tức minh bạch, đa chiều. Hoàn tác tin giả, khôi phục sự thật.',
+    description: 'Ctrl Z - Transparent, multi-dimensional news.',
     sameAs: [
       // Add social media links when available
     ],
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'Customer Service',
-      availableLanguage: ['Vietnamese'],
+      availableLanguage: ['vi'],
     },
   };
 
@@ -132,63 +134,43 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="vi" suppressHydrationWarning className={inter.variable}>
-      <head>
-        {/* Preconnect to external domains for faster image loading */}
-        <link rel="preconnect" href="https://i1-vnexpress.vnecdn.net" crossOrigin="anonymous" />
-        <link rel="preconnect" href="https://cdn.24h.com.vn" crossOrigin="anonymous" />
-        <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://i1-vnexpress.vnecdn.net" />
-        <link rel="dns-prefetch" href="https://cdn.24h.com.vn" />
-        <link rel="dns-prefetch" href="https://images.unsplash.com" />
-        
-        {/* RSS Feed */}
-        <link rel="alternate" type="application/rss+xml" title="Ctrl Z RSS Feed" href={`${baseUrl}/rss.xml`} />
-        
-        {/* Critical CSS for above-the-fold content */}
-        <style dangerouslySetInnerHTML={{
-          __html: `
-            :root { font-family: system-ui, -apple-system, sans-serif; }
-            body { margin: 0; overflow-x: hidden; }
-            #main-content { min-height: 60vh; }
-          `
-        }} />
-        
-        {/* Favicon optimized */}
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="apple-touch-icon" href="/favicon.ico" />
-        
+    <html lang="vi">
+      <body suppressHydrationWarning className={inter.className}>
         {/* Structured Data - Organization */}
-        <script
+        <Script
+          id="organization-schema"
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
         />
         
         {/* Structured Data - WebSite */}
-        <script
+        <Script
+          id="website-schema"
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
         />
         
-        {/* PWA Service Worker registration */}
-        <script dangerouslySetInnerHTML={{
-          __html: `
+        <div className="bg-gradient-to-br from-gray-100 via-blue-50 to-indigo-50 min-h-screen">
+          <div className="flex flex-col min-h-screen">
+            <Header />
+            <main className="flex-grow" id="main-content">
+              {children}
+            </main>
+            <Footer />
+          </div>
+        </div>
+        
+        {/* PWA Service Worker registration - Client-side only */}
+        <Script id="service-worker" strategy="afterInteractive">
+          {`
             if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
               window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js').catch(() => {});
               });
             }
-          `
-        }} />
-      </head>
-      <body className={`${inter.className} bg-gradient-to-br from-gray-100 via-blue-50 to-indigo-50 min-h-screen`} suppressHydrationWarning>
-        <div className="flex flex-col min-h-screen">
-          <Header />
-          <main className="flex-grow" id="main-content">
-            {children}
-          </main>
-          <Footer />
-        </div>
+          `}
+        </Script>
+        
         {/* Only load analytics in production */}
         {process.env.NODE_ENV === 'production' && (
           <>

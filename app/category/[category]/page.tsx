@@ -5,6 +5,7 @@ import type { Metadata } from 'next';
 import OptimizedImage from '@/components/OptimizedImage';
 import Breadcrumb from '@/components/Breadcrumb';
 import { getCardBgClasses } from '@/lib/utils/card-colors';
+import { getCategoryDisplayName } from '@/lib/constants';
 
 interface CategoryPageProps {
   params: Promise<{
@@ -20,6 +21,7 @@ const categoryBackgrounds: { [key: string]: string } = {
   'o-to': 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1920&q=80', // Cars
   'giai-tri': 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1920&q=80', // Entertainment
   'game': 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1920&q=80', // Gaming
+  'tin-nong': 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1920&q=80', // Hot News
 };
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
@@ -50,10 +52,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     'o-to': 'Ô tô',
     'giai-tri': 'Giải trí',
     'game': 'Game',
+    'tin-nong': 'Tin Nóng',
   };
   
-  const categoryDisplayName = categoryMap[categorySlug] || categoryName;
-  const articles = await getArticlesByCategoryCached(categoryDisplayName, true);
+  const internalCategoryName = categoryMap[categorySlug] || categoryName;
+  const categoryDisplayName = getCategoryDisplayName(internalCategoryName);
+  const articles = await getArticlesByCategoryCached(internalCategoryName, true);
   const backgroundImage = categoryBackgrounds[categorySlug] || categoryBackgrounds['cong-nghe'];
 
   return (
@@ -120,8 +124,10 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                             alt={article.title}
                             fill
                             objectFit="cover"
-                            loading="lazy"
-                            className="object-cover transition-transform duration-300"
+                            loading={idx < 3 ? "eager" : "lazy"}
+                            priority={idx < 3}
+                            quality={80}
+                            className="object-cover transition-opacity duration-300"
                             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                           />
                         </div>
@@ -129,7 +135,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                       <div className="p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-semibold rounded">
-                            {article.category}
+                            {getCategoryDisplayName(article.category)}
                           </span>
                           <span className="text-xs text-gray-500">{article.views} lượt xem</span>
                         </div>

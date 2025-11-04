@@ -499,6 +499,7 @@ Trả về NGAY theo format (KHÔNG giải thích):`;
  */
 function categoryToSlug(category: string): string {
   const categoryMap: { [key: string]: string } = {
+    'Tin Nóng': 'tin-nong',
     'Công nghệ': 'cong-nghe',
     'Thể thao': 'the-thao',
     'Sức khỏe': 'suc-khoe',
@@ -565,6 +566,10 @@ function addFixedLinks(
 
     // Add category-specific paragraphs for better context
     const specificParagraphs: { [key: string]: string[] } = {
+      'Tin Nóng': [
+        `Tin tức nóng hổi trong chuyên mục [${categoryName}](/category/${slug}) được cập nhật mỗi phút.`,
+        `Chuyên mục [${categoryName}](/category/${slug}) mang đến những tin tức hot nhất hiện tại.`,
+      ],
       'Công nghệ': [
         `Công nghệ mới nhất trong lĩnh vực [${categoryName}](/category/${slug}) đang được cập nhật.`,
         `Chuyên mục [${categoryName}](/category/${slug}) mang đến những xu hướng công nghệ mới nhất.`,

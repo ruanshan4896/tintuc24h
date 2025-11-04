@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Rss, Plus, Trash2, RefreshCw, Check, X, Loader2 } from 'lucide-react';
 import type { RssFeed, CreateRssFeedInput, RssImportResult } from '@/lib/types/rss';
+import { CATEGORIES } from '@/lib/constants';
 
 export default function RssManagementPage() {
   const [feeds, setFeeds] = useState<RssFeed[]>([]);
@@ -20,7 +21,8 @@ export default function RssManagementPage() {
   const [aiRewrite, setAiRewrite] = useState(false);
   const [aiProvider, setAiProvider] = useState<'google' | 'openai'>('google');
 
-  const categories = ['Công nghệ', 'Thể thao', 'Sức khỏe', 'Ô tô', 'Giải trí', 'Game'];
+  // Use categories from constants to keep it in sync
+  const categories = CATEGORIES as readonly string[];
 
   useEffect(() => {
     fetchFeeds();
