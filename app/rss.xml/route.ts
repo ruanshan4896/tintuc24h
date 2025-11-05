@@ -11,8 +11,8 @@ export async function GET() {
     const siteName = 'Ctrl Z';
     const siteDescription = 'Ctrl Z - Tin tức minh bạch, đa chiều. Hoàn tác tin giả, khôi phục sự thật.';
 
-    // Get latest articles from all categories (including Tin Nóng)
-    const allArticles = await getArticlesServer({ published: true, limit: 50 });
+    // Get latest published articles then limit to 50 (server API accepts only "published" flag)
+    const allArticles = (await getArticlesServer(true)).slice(0, 50);
     
     // Sort by created_at descending (newest first)
     const sortedArticles = allArticles.sort((a, b) => 
