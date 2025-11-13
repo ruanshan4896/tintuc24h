@@ -33,6 +33,23 @@ function getGoogleAIKeys(): string[] {
 
 // Round-robin index for key rotation (stored in memory)
 let currentKeyIndex = 0;
+// Track temporarily exhausted keys (quota) with TTL
+const exhaustedKeys = new Map<string, number>(); // key -> expireAt (ms)
+const EXHAUST_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
+function isKeyExhausted(key: string): boolean {
+  const expireAt = exhaustedKeys.get(key);
+  if (!expireAt) return false;
+  if (Date.now() > expireAt) {
+    exhaustedKeys.delete(key);
+    return false;
+  }
+  return true;
+}
+
+function markKeyExhausted(key: string) {
+  exhaustedKeys.set(key, Date.now() + EXHAUST_TTL_MS);
+}
 
 // Clean up markdown output from AI (remove code fence wrappers)
 function cleanMarkdownOutput(content: string): string {
@@ -443,6 +460,12 @@ TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
         const keyNumber = keyIndex + 1;
         const selectedKey = googleApiKeys[keyIndex];
         
+        // Skip temporarily exhausted keys
+        if (isKeyExhausted(selectedKey)) {
+          console.log(`⏭️  Skipping Key #${keyNumber} (temporarily exhausted)`);
+          continue;
+        }
+
         console.log(`🔑 Trying Key #${keyNumber} of ${googleApiKeys.length}...`);
         
         const tempGoogleAI = new GoogleGenerativeAI(selectedKey);
@@ -470,7 +493,10 @@ TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
           
           if (isQuotaError) {
             console.log(`⚠️  Key #${keyNumber} quota exceeded, trying next key...`);
+            markKeyExhausted(selectedKey);
             lastError = minimalError;
+            // Small delay to avoid hammering
+            await new Promise(r => setTimeout(r, 200));
             continue; // Try next key
           }
           
@@ -505,7 +531,9 @@ TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
             
             if (isFullQuotaError) {
               console.log(`⚠️  Key #${keyNumber} quota exceeded (full config), trying next key...`);
+              markKeyExhausted(selectedKey);
               lastError = fullError;
+              await new Promise(r => setTimeout(r, 200));
               continue; // Try next key
             }
             
@@ -668,9 +696,10 @@ TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
       );
     }
 
+    const isQuota429 = error?.message?.includes('429') || error?.status === 429;
     return NextResponse.json(
-      { error: 'Failed to rewrite content', details: error.message },
-      { status: 500 }
+      { error: isQuota429 ? 'Google AI quota exceeded' : 'Failed to rewrite content', details: error.message },
+      { status: isQuota429 ? 429 : 500 }
     );
   }
 }

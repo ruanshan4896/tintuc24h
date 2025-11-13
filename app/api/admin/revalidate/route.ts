@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { path } = body;
+    const { path, paths } = body ?? {};
 
     // Call the actual revalidate API with secret injected
     const revalidateSecret = process.env.REVALIDATE_SECRET;
@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         path,
+        paths,
         secret: revalidateSecret, // Inject secret here (server-side only)
       }),
     });

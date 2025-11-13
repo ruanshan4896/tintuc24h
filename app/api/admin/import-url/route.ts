@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { scrapeFullArticle, extractMainImage, extractArticleImages } from '@/lib/utils/scraper';
-import { addKeywordLinks } from '@/lib/utils/keyword-linking';
+import { scrapeFullArticle, extractMainImage } from '@/lib/utils/scraper';
+import { getCategorySlug, toSlug } from '@/lib/utils/slug';
+import { triggerRevalidate } from '@/lib/api/revalidate';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Increase timeout for scraping + AI processing
@@ -60,11 +61,37 @@ function getGoogleAIKeys(): string[] {
   return keys;
 }
 
+// Round-robin index for caption generation keys
+let currentCaptionKeyIndex = 0;
+const exhaustedCaptionKeys = new Map<string, number>();
+const CAPTION_EXHAUST_TTL_MS = 15 * 60 * 1000;
+function isCaptionKeyExhausted(key: string): boolean {
+  const expireAt = exhaustedCaptionKeys.get(key);
+  if (!expireAt) return false;
+  if (Date.now() > expireAt) {
+    exhaustedCaptionKeys.delete(key);
+    return false;
+  }
+  return true;
+}
+function markCaptionKeyExhausted(key: string) {
+  exhaustedCaptionKeys.set(key, Date.now() + CAPTION_EXHAUST_TTL_MS);
+}
+
 // Helper function to generate image caption and alt using AI
 async function generateImageCaptionAndAlt(
   articleTitle: string
 ): Promise<{ caption: string; alt: string }> {
   try {
+    // Allow disabling caption generation via env
+    if (process.env.IMAGE_CAPTION_ENABLED === 'false') {
+      const mainTopic = articleTitle.split(':')[0].trim();
+      return {
+        caption: articleTitle.length > 60 ? articleTitle.substring(0, 60) + '...' : articleTitle,
+        alt: mainTopic
+      };
+    }
+
     const googleApiKeys = getGoogleAIKeys();
     
     if (googleApiKeys.length === 0) {
@@ -90,17 +117,25 @@ ALT: [mô tả alt ở đây]
 Trả về NGAY theo format (KHÔNG giải thích):`;
 
     let response;
+    let lastError;
     
-    for (let keyIndex = 0; keyIndex < googleApiKeys.length; keyIndex++) {
+    for (let attempt = 0; attempt < googleApiKeys.length; attempt++) {
+      const keyIndex = (currentCaptionKeyIndex + attempt) % googleApiKeys.length;
       const selectedKey = googleApiKeys[keyIndex];
       const keyNumber = keyIndex + 1;
       
+      if (isCaptionKeyExhausted(selectedKey)) {
+        console.log(`⏭️ Skipping Caption Key #${keyNumber} (temporarily exhausted)`);
+        continue;
+      }
+
       try {
         const genAI = new GoogleGenerativeAI(selectedKey);
         const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
         
         const result = await model.generateContent(prompt);
         response = result.response.text().trim();
+        currentCaptionKeyIndex = (keyIndex + 1) % googleApiKeys.length;
         break;
       } catch (error: any) {
         const isQuotaError = error.message?.includes('429') || 
@@ -108,6 +143,9 @@ Trả về NGAY theo format (KHÔNG giải thích):`;
                              error.message?.includes('Too Many Requests');
         
         if (isQuotaError) {
+          markCaptionKeyExhausted(selectedKey);
+          lastError = error;
+          await new Promise(r => setTimeout(r, 150));
           continue;
         } else {
           throw error;
@@ -116,6 +154,9 @@ Trả về NGAY theo format (KHÔNG giải thích):`;
     }
     
     if (!response) {
+      if (lastError) {
+        throw lastError;
+      }
       const mainTopic = articleTitle.split(':')[0].trim();
       return {
         caption: `Hình minh họa: ${mainTopic}`,
@@ -236,17 +277,25 @@ export async function POST(request: NextRequest) {
       }
 
       // Revalidate sitemap
-      try {
-        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-        await fetch(`${baseUrl}/api/admin/revalidate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path: '/post-sitemap.xml' }),
-        });
-        console.log('✅ Sitemap revalidated');
-      } catch (revalError) {
-        console.warn('⚠️ Could not revalidate sitemap:', revalError);
+      const revalidatePathsExisting: string[] = [];
+      if (article?.slug) {
+        revalidatePathsExisting.push(`/articles/${article.slug}`);
       }
+      if (article?.category) {
+        revalidatePathsExisting.push(`/category/${getCategorySlug(article.category)}`);
+      }
+      if (Array.isArray(article?.tags)) {
+        article.tags.forEach((tag: string) => {
+          const slug = toSlug(tag);
+          if (slug) {
+            revalidatePathsExisting.push(`/tag/${slug}`);
+          }
+        });
+      }
+
+      await triggerRevalidate(revalidatePathsExisting, {
+        logLabel: 'admin-import-existing',
+      });
 
       return NextResponse.json({
         success: true,
@@ -305,7 +354,9 @@ export async function POST(request: NextRequest) {
     console.log('  - content.length:', content.length);
     console.log('  - Should rewrite?', aiRewrite && content.length > 200);
     
-    if (aiRewrite && content.length > 200) {
+    // Allow disabling AI rewrite globally via env
+    const aiRewriteEnabled = process.env.AI_REWRITE_ENABLED !== 'false';
+    if (aiRewrite && aiRewriteEnabled && content.length > 200) {
       try {
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.log(`🤖 AI REWRITE: ${title.substring(0, 50)}...`);
@@ -403,126 +454,45 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Extract multiple images (2-3 images) from article - GIỐNG HỆT RSS FETCH
-    let articleImages: string[] = [];
-    try {
-      articleImages = await extractArticleImages(url, undefined, 3);
-      console.log(`🖼️ Extracted ${articleImages.length} images from article`);
-    } catch (error: any) {
-      console.warn('⚠️ Failed to extract multiple images, using main image:', error.message);
-      // Fallback to single image
-      if (imageUrl) {
-        articleImages = [imageUrl];
+    // Only one main image: prefer previously detected imageUrl or scrape main
+    let chosenImage: string | null = imageUrl || null;
+    if (!chosenImage) {
+      try {
+        const scraped = await extractMainImage(url);
+        if (scraped) chosenImage = scraped;
+      } catch {
+        // ignore
       }
     }
 
-    // Use scraped images if available (NO Unsplash!) - GIỐNG HỆT RSS FETCH
-    if (articleImages.length > 0) {
-      console.log(`🖼️ Processing ${articleImages.length} images...`);
-      
-      // Process each image with AI-generated caption & alt
-      const imageMarkdowns: string[] = [];
-      for (let i = 0; i < articleImages.length; i++) {
-        const imgUrl = articleImages[i];
-        const { caption, alt } = await generateImageCaptionAndAlt(title);
-        imageMarkdowns.push(`\n\n![${alt}](${imgUrl})\n*${caption}*\n`);
+    if (chosenImage) {
+      const { caption, alt } = await generateImageCaptionAndAlt(title);
+      const singleImageMarkdown = `\n\n![${alt}](${chosenImage})\n*${caption}*\n`;
+      const placeholder = `[IMAGE_PLACEHOLDER_1]`;
+      if (finalContent.includes(placeholder)) {
+        finalContent = finalContent.replace(placeholder, singleImageMarkdown);
+        console.log('✅ Inserted single image via placeholder');
+      } else {
+        const headingMatch = finalContent.match(/^##\s.+$/m);
+        if (headingMatch && headingMatch.index !== undefined) {
+          const insertPos = headingMatch.index + headingMatch[0].length;
+          finalContent = finalContent.slice(0, insertPos) + singleImageMarkdown + finalContent.slice(insertPos);
+          console.log('✅ Inserted single image after first heading');
+        } else {
+          const paragraphs = finalContent.split(/\n\n/);
+          if (paragraphs.length > 0) {
+            paragraphs[0] = paragraphs[0] + singleImageMarkdown;
+            finalContent = paragraphs.join('\n\n');
+            console.log('✅ Inserted single image after first paragraph');
+          }
+        }
       }
-
-          // Replace placeholders or insert images
-          let placeholderCount = 0;
-          for (let i = 0; i < imageMarkdowns.length; i++) {
-            const placeholder = `[IMAGE_PLACEHOLDER_${i + 1}]`;
-            if (finalContent.includes(placeholder)) {
-              finalContent = finalContent.replace(placeholder, imageMarkdowns[i]);
-              placeholderCount++;
-              console.log(`✅ Replaced ${placeholder} with image ${i + 1}`);
-            }
-          }
-
-          // If no placeholders, insert images strategically
-          if (placeholderCount === 0 && imageMarkdowns.length > 0) {
-            // Strategy 1: Insert after headings (preferred)
-            const headingMatches = Array.from(finalContent.matchAll(/^##\s.+$/gm));
-            
-            if (headingMatches.length > 0) {
-              // Insert images from end to start to avoid index shifting
-              const imagesToInsert = [...imageMarkdowns];
-              let contentOffset = 0;
-              
-              // Distribute images evenly across headings
-              // If we have more images than headings, reuse heading positions
-              const insertPositions: number[] = [];
-              const totalImages = imagesToInsert.length;
-              
-              for (let i = 0; i < totalImages; i++) {
-                // Distribute across headings, wrapping if needed
-                const headingIdx = i % headingMatches.length;
-                insertPositions.push(headingIdx);
-              }
-              
-              // Insert from end to start (reverse order)
-              for (let idx = insertPositions.length - 1; idx >= 0; idx--) {
-                const headingIdx = insertPositions[idx];
-                const heading = headingMatches[headingIdx];
-                const insertPos = heading.index! + heading[0].length + contentOffset;
-                finalContent = finalContent.slice(0, insertPos) + imagesToInsert[idx] + finalContent.slice(insertPos);
-                contentOffset += imagesToInsert[idx].length;
-                console.log(`✅ Inserted image ${idx + 1} after heading ${headingIdx + 1}`);
-              }
-            } else {
-              // Strategy 2: No headings - insert images between paragraphs
-              const paragraphs = finalContent.split(/\n\n/);
-              
-              // Distribute images evenly throughout content
-              // Ensure all images are inserted even if few paragraphs
-              const totalImages = imageMarkdowns.length;
-              const totalParagraphs = paragraphs.length;
-              
-              if (totalParagraphs > 1) {
-                // Calculate interval to distribute evenly
-                const interval = Math.max(1, Math.floor(totalParagraphs / (totalImages + 1)));
-                
-                // Insert from end to start to avoid index shifting
-                for (let i = totalImages - 1; i >= 0; i--) {
-                  const insertIndex = Math.min(interval * (i + 1), totalParagraphs - 1);
-                  paragraphs[insertIndex] = imageMarkdowns[i] + '\n\n' + paragraphs[insertIndex];
-                  console.log(`✅ Inserted image ${i + 1} between paragraphs at position ${insertIndex}`);
-                }
-                
-                finalContent = paragraphs.join('\n\n');
-              } else {
-                // Very few paragraphs - insert all images at the end of first paragraph
-                const allImages = imageMarkdowns.join('\n\n');
-                paragraphs[0] = paragraphs[0] + '\n\n' + allImages;
-                finalContent = paragraphs.join('\n\n');
-                console.log(`✅ Inserted ${totalImages} images after first paragraph`);
-              }
-            }
-          }
     } else {
-      console.warn('⚠️ No images available from scraping');
+      console.warn('⚠️ No main image available');
     }
 
     // Remove any remaining placeholders (if any)
     finalContent = finalContent.replace(/\[IMAGE_PLACEHOLDER_\d+\]/g, '');
-
-    // Auto Keyword Linking: Add internal links to related articles - GIỐNG HỆT RSS FETCH
-    console.log('🔗 Adding keyword links...');
-    // Generate temporary ID for new article (use slug as identifier)
-    const tempArticleId = 'temp-' + Date.now();
-    
-    // Auto Keyword Linking: Add 3 fixed links (homepage, category, self)
-    console.log('🔗 Adding fixed keyword links (homepage, category, self)...');
-    
-    // Add keyword links to content (3 fixed links)
-    finalContent = await addKeywordLinks(
-      finalContent, 
-      title, 
-      slug, // Use slug as identifier
-      aiTags, 
-      category || 'Công nghệ', // Pass category
-      slug // Pass article slug
-    );
 
     // Prepare article data - GIỐNG HỆT RSS FETCH
     const articleData = {
@@ -530,7 +500,7 @@ export async function POST(request: NextRequest) {
       slug,
       description: finalDescription, // Use AI-generated description if available
       content: finalContent, // Use AI-rewritten content if available
-      image_url: articleImages.length > 0 ? articleImages[0] : null, // Use first image as main image
+      image_url: chosenImage, // Use single main image
       category: category || 'Công nghệ',
       author: 'Ctrl Z', // Fixed author
       tags: aiTags.length > 0 ? aiTags : [], // Use AI-generated tags
@@ -562,17 +532,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Revalidate sitemap
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-      await fetch(`${baseUrl}/api/admin/revalidate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: '/post-sitemap.xml' }),
-      });
-      console.log('✅ Sitemap revalidated');
-    } catch (revalError) {
-      console.warn('⚠️ Could not revalidate sitemap:', revalError);
+    const revalidatePathsNew: string[] = [];
+    if (article?.slug) {
+      revalidatePathsNew.push(`/articles/${article.slug}`);
     }
+    if (article?.category) {
+      revalidatePathsNew.push(`/category/${getCategorySlug(article.category)}`);
+    }
+    if (Array.isArray(article?.tags)) {
+      article.tags.forEach((tag: string) => {
+        const slug = toSlug(tag);
+        if (slug) {
+          revalidatePathsNew.push(`/tag/${slug}`);
+        }
+      });
+    }
+
+    await triggerRevalidate(revalidatePathsNew, {
+      logLabel: 'admin-import-new',
+    });
 
     return NextResponse.json({
       success: true,
