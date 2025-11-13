@@ -45,8 +45,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Bust cache tags used by unstable_cache
-    revalidateTag('articles');
-    revalidateTag('tags');
+    revalidateTag('articles', { revalidate: true });
+    revalidateTag('tags', { revalidate: true });
 
     return NextResponse.json(
       { revalidated: true, paths: Array.from(pathsToRevalidate), now: Date.now() },
@@ -99,8 +99,8 @@ export async function GET(request: NextRequest) {
       console.log(`Revalidated path: ${p}`);
     });
 
-    revalidateTag('articles');
-    revalidateTag('tags');
+    revalidateTag('articles', { revalidate: true });
+    revalidateTag('tags', { revalidate: true });
 
     return NextResponse.json(
       { revalidated: true, paths: Array.from(pathsToRevalidate), now: Date.now() },
