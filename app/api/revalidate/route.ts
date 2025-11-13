@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath, revalidateTag } from 'next/cache';
 
+function revalidateTagCompat(tag: string) {
+  try {
+    (revalidateTag as unknown as (tag: string) => void)(tag);
+  } catch (error) {
+    console.warn(`revalidateTag compatibility fallback failed for tag "${tag}"`, error);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -45,8 +53,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Bust cache tags used by unstable_cache
-    revalidateTag('articles', { revalidate: true });
-    revalidateTag('tags', { revalidate: true });
+    revalidateTagCompat('articles');
+    revalidateTagCompat('tags');
 
     return NextResponse.json(
       { revalidated: true, paths: Array.from(pathsToRevalidate), now: Date.now() },
@@ -99,8 +107,8 @@ export async function GET(request: NextRequest) {
       console.log(`Revalidated path: ${p}`);
     });
 
-    revalidateTag('articles', { revalidate: true });
-    revalidateTag('tags', { revalidate: true });
+    revalidateTagCompat('articles');
+    revalidateTagCompat('tags');
 
     return NextResponse.json(
       { revalidated: true, paths: Array.from(pathsToRevalidate), now: Date.now() },
