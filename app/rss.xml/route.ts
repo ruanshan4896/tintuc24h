@@ -23,7 +23,8 @@ export async function GET() {
     const rssItems = sortedArticles.map(article => {
       const articleUrl = `${baseUrl}/articles/${article.slug}`;
       const pubDate = new Date(article.created_at).toUTCString();
-      const description = article.description || article.content.substring(0, 200) + '...';
+      // Use description only (content field is not fetched to save egress)
+      const description = article.description || 'Không có mô tả';
       
       // Escape XML special characters
       const escapeXml = (text: string) => {

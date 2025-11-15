@@ -30,7 +30,8 @@ export default function AdminPage() {
     setLoading(true);
     try {
       // Use server-side API instead of direct client query (bypasses RLS)
-      const response = await fetch('/api/admin/articles?limit=500');
+      // No limit parameter = fetch all articles
+      const response = await fetch('/api/admin/articles');
       if (response.ok) {
         const result = await response.json();
         setArticles(result.articles || []);

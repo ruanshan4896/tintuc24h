@@ -6,14 +6,22 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '500');
+    // Allow custom limit, but default to no limit (or very high limit) to show all articles
+    const limitParam = searchParams.get('limit');
+    const limit = limitParam ? parseInt(limitParam) : null;
     
     // Only select fields needed for admin list view (NOT content!)
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('articles')
       .select('id, title, slug, category, published, views, created_at')
-      .order('created_at', { ascending: false })
-      .limit(limit);
+      .order('created_at', { ascending: false });
+    
+    // Only apply limit if specified (for performance testing)
+    if (limit && limit > 0) {
+      query = query.limit(limit);
+    }
+    
+    const { data, error } = await query;
 
     if (error) {
       console.error('Error fetching articles:', error);

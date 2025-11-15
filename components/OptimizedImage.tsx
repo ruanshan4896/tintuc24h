@@ -22,7 +22,9 @@ interface OptimizedImageProps {
   inline?: boolean; // If true, use span instead of div (for Markdown compatibility)
 }
 
+// Default fallback image - use a simple placeholder if og-image.jpg fails
 const DEFAULT_FALLBACK = '/og-image.jpg'; // Default fallback image
+const PLACEHOLDER_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQ1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjQ1MCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZSBub3QgYXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg==';
 
 /**
  * Check if image URL is from vnexpress and needs proxy
@@ -98,20 +100,20 @@ function OptimizedImage({
       return;
     }
     
-    if (retryAttempts < retryCount && imgSrc !== fallbackSrc) {
-      // Retry once with minimal delay
-      const delay = 500; // Reduced delay
+    // Faster fallback - skip retry for non-priority images to improve UX
+    if (priority && retryAttempts < retryCount && imgSrc !== fallbackSrc) {
+      // Only retry for priority images
+      const delay = 300; // Reduced delay for faster fallback
       timeoutRef.current = setTimeout(() => {
         if (process.env.NODE_ENV === 'development') {
           console.log(`🔄 Retrying image load (attempt ${retryAttempts + 1}/${retryCount})...`);
         }
         setRetryAttempts(prev => prev + 1);
-        // Don't use cache buster - let browser cache work
         setImgSrc(proxiedSrc);
         setIsLoading(true);
       }, delay);
     } else if (imgSrc !== fallbackSrc) {
-      // Switch to fallback - only once
+      // Switch to fallback immediately for non-priority, or after retry for priority
       if (process.env.NODE_ENV === 'development') {
         console.log(`🔄 Switching to fallback image: ${fallbackSrc}`);
       }
@@ -119,11 +121,20 @@ function OptimizedImage({
       setIsLoading(true);
       setHasError(true);
     } else {
-      // Fallback also failed, stop loading
-      setIsLoading(false);
-      setHasError(true);
-      if (onError) {
-        onError();
+      // Fallback also failed, try placeholder as last resort
+      if (fallbackSrc !== PLACEHOLDER_IMAGE) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🔄 Fallback failed, using placeholder`);
+        }
+        setImgSrc(PLACEHOLDER_IMAGE);
+        setIsLoading(true);
+      } else {
+        // Placeholder also failed, stop loading
+        setIsLoading(false);
+        setHasError(true);
+        if (onError) {
+          onError();
+        }
       }
     }
   };
@@ -156,18 +167,18 @@ function OptimizedImage({
       setRetryAttempts(0);
       hasLoadedRef.current = false; // Reset loaded state for new image
       
-      // Set timeout for new image
+      // Set timeout for new image - reduced for faster fallback
       timeoutRef.current = setTimeout(() => {
         setIsLoading(prev => {
           if (prev && !hasLoadedRef.current) {
             if (process.env.NODE_ENV === 'development') {
-              console.warn(`⏱️ Image load timeout (4s) for: ${src}`);
+              console.warn(`⏱️ Image load timeout (3s) for: ${src}`);
             }
             handleError();
           }
           return prev;
         });
-      }, 4000); // 4 second timeout
+      }, 3000); // 3 second timeout (reduced from 4s)
     }
     
     return () => {
@@ -213,7 +224,7 @@ function OptimizedImage({
           onLoadingComplete={handleLoad} // Additional callback for Next.js Image
           placeholder={priority ? "blur" : "empty"}
           blurDataURL={priority ? "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQ3NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiLz4=" : undefined}
-          unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('lh3.googleusercontent.com') || imgSrc.includes('/api/image-proxy')}
+          unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('lh3.googleusercontent.com') || imgSrc.includes('/api/image-proxy') || imgSrc.startsWith('data:')}
         />
         {hasError && !isLoading && imgSrc === fallbackSrc && (
           <span className="inline-block text-xs text-gray-500 ml-2">Không thể tải ảnh</span>
@@ -270,7 +281,7 @@ function OptimizedImage({
           onLoadingComplete={handleLoad} // Additional callback for Next.js Image
           placeholder={priority ? "blur" : "empty"}
           blurDataURL={priority ? "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQ3NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiLz4=" : undefined}
-          unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('lh3.googleusercontent.com') || imgSrc.includes('/api/image-proxy')}
+          unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('lh3.googleusercontent.com') || imgSrc.includes('/api/image-proxy') || imgSrc.startsWith('data:')}
         />
       ) : (
         <Image
@@ -288,7 +299,7 @@ function OptimizedImage({
           onLoadingComplete={handleLoad} // Additional callback for Next.js Image
           placeholder={priority ? "blur" : "empty"}
           blurDataURL={priority ? "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQ3NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiLz4=" : undefined}
-          unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('lh3.googleusercontent.com') || imgSrc.includes('/api/image-proxy')}
+          unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('lh3.googleusercontent.com') || imgSrc.includes('/api/image-proxy') || imgSrc.startsWith('data:')}
         />
       )}
     </div>

@@ -348,6 +348,7 @@ export async function POST(request: NextRequest) {
     let finalContent = content;
     let finalDescription = description.substring(0, 500);
     let aiTags: string[] = [];
+    let mainKeyword: string | null = null;
     
     console.log('🔍 Checking AI Rewrite conditions:');
     console.log('  - aiRewrite flag:', aiRewrite);
@@ -406,6 +407,12 @@ export async function POST(request: NextRequest) {
             if (rewriteData.tags && Array.isArray(rewriteData.tags) && rewriteData.tags.length > 0) {
               aiTags = rewriteData.tags;
               console.log(`🏷️ Using AI-generated tags:`, aiTags);
+            }
+            
+            // Use AI-generated main keyword for autolink
+            if (rewriteData.mainKeyword) {
+              mainKeyword = rewriteData.mainKeyword.toLowerCase().trim();
+              console.log(`🔗 Using AI-generated main keyword: ${mainKeyword}`);
             }
             
             console.log(`✅ AI Rewrite SUCCESS!`);
@@ -504,6 +511,7 @@ export async function POST(request: NextRequest) {
       category: category || 'Công nghệ',
       author: 'Ctrl Z', // Fixed author
       tags: aiTags.length > 0 ? aiTags : [], // Use AI-generated tags
+      main_keyword: mainKeyword || null, // Main keyword for autolink feature
     };
 
     // If preview mode, return article data without saving

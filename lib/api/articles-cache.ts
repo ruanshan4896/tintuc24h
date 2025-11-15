@@ -5,9 +5,10 @@ import { Article } from '@/lib/types/article';
 
 /**
  * Cache configuration
+ * Increased TTL to reduce database queries and egress
  */
-const CACHE_TTL = 60; // 60 seconds for frequently accessed data
-const LONG_CACHE_TTL = 300; // 5 minutes for less frequently accessed data
+const CACHE_TTL = 300; // 5 minutes for frequently accessed data (increased to reduce egress)
+const LONG_CACHE_TTL = 1800; // 30 minutes for less frequently accessed data (increased to reduce egress)
 
 /**
  * React Cache - Deduplicates requests within the same render
@@ -18,7 +19,7 @@ export const getArticlesCached = cache(async (published = true): Promise<Article
     .from('articles')
     .select('id, title, slug, description, image_url, category, tags, author, views, created_at, updated_at')
     .order('created_at', { ascending: false })
-    .limit(500); // Limit to prevent huge queries
+    .limit(200); // Reduced from 500 to save egress
 
   if (published) {
     query.eq('published', true);
@@ -39,6 +40,7 @@ export const getArticlesCached = cache(async (published = true): Promise<Article
  */
 export const getArticlesByCategoryCached = unstable_cache(
   async (category: string, published = true): Promise<Article[]> => {
+    // Optimized query - only select needed fields, use index
     const query = supabaseAdmin
       .from('articles')
       .select('id, title, slug, description, image_url, category, tags, author, views, created_at, updated_at')
@@ -62,7 +64,7 @@ export const getArticlesByCategoryCached = unstable_cache(
   ['articles-by-category'],
   {
     revalidate: CACHE_TTL,
-    tags: ['articles'],
+    tags: ['articles', 'articles-by-category'],
   }
 );
 
@@ -84,27 +86,44 @@ function tagToSlug(tag: string): string {
 
 /**
  * Check if tag matches slug (handles both full tag name and slug format)
+ * Uses exact matching only to avoid false positives
  */
 function tagMatchesSlug(tag: string, tagSlug: string): boolean {
   // Normalize inputs
   const normalizedTag = tag.toLowerCase().trim();
   const normalizedSlug = tagSlug.toLowerCase().trim();
   
-  // Exact match (tag name or slug)
+  // 1. Exact match (tag name or slug)
   if (normalizedTag === normalizedSlug) return true;
   
-  // Convert tag to slug and match
+  // 2. Convert tag to slug and match exactly
   const tagAsSlug = tagToSlug(tag);
   if (tagAsSlug === normalizedSlug) return true;
   
-  // Convert slug back to readable format and match
+  // 3. Convert slug back to readable format and match exactly
   const slugAsReadable = normalizedSlug.replace(/-/g, ' ');
   if (normalizedTag === slugAsReadable) return true;
   
-  // Partial match (slug contains tag or vice versa)
-  if (normalizedTag.includes(normalizedSlug) || normalizedSlug.includes(normalizedTag)) return true;
-  if (tagAsSlug.includes(normalizedSlug) || normalizedSlug.includes(tagAsSlug)) return true;
+  // 4. Word boundary match (e.g., "iphone 15" should match "iphone-15" but not "smartphone")
+  // Check if tag slug matches as a complete word in the tag
+  const tagWords = normalizedTag.split(/\s+/);
+  const slugWords = normalizedSlug.split(/-/);
   
+  // Check if all slug words appear as complete words in tag
+  const allSlugWordsMatch = slugWords.every(slugWord => 
+    tagWords.some(tagWord => tagWord === slugWord)
+  );
+  
+  if (allSlugWordsMatch && slugWords.length > 0) return true;
+  
+  // 5. Check if tag words match slug (reverse)
+  const allTagWordsMatch = tagWords.every(tagWord =>
+    slugWords.some(slugWord => slugWord === tagWord)
+  );
+  
+  if (allTagWordsMatch && tagWords.length > 0) return true;
+  
+  // No match - return false (removed partial match to avoid false positives)
   return false;
 }
 
@@ -116,33 +135,52 @@ export const getArticlesByTagCached = unstable_cache(
   async (tagSlug: string, published = true): Promise<Article[]> => {
     console.log(`🔍 Searching for tag slug: "${tagSlug}"`);
     
-    // Try exact match first with PostgreSQL contains
-    // This works if tag in DB is exactly the slug (e.g., "chien-thuat")
-    const exactQuery = supabaseAdmin
+    // Normalize tag slug for consistent matching
+    const normalizedSlug = tagSlug.toLowerCase().trim();
+    
+    // Strategy 1: Try exact slug match (e.g., "chien-thuat")
+    const exactQuery1 = supabaseAdmin
       .from('articles')
       .select('id, title, slug, description, image_url, category, tags, author, views, created_at, updated_at')
       .eq('published', published)
-      .contains('tags', [tagSlug])
+      .contains('tags', [normalizedSlug])
       .order('created_at', { ascending: false })
       .limit(100);
 
-    const { data: exactData, error: exactError } = await exactQuery;
+    const { data: exactData1, error: exactError1 } = await exactQuery1;
 
-    if (!exactError && exactData && exactData.length > 0) {
-      console.log(`✅ Found ${exactData.length} articles with exact tag match`);
-      return exactData as Article[];
+    if (!exactError1 && exactData1 && exactData1.length > 0) {
+      console.log(`✅ Found ${exactData1.length} articles with exact slug match: "${normalizedSlug}"`);
+      return exactData1 as Article[];
     }
 
-    // Fallback: Get articles and filter in memory with smart matching
-    // This handles tags like "chiến thuật" matching slug "chien-thuat"
-    console.log('⚠️ Exact match failed, using smart memory filter...');
+    // Strategy 2: Try with slug converted to readable format (e.g., "chiến thuật")
+    const slugAsReadable = normalizedSlug.replace(/-/g, ' ');
+    const exactQuery2 = supabaseAdmin
+      .from('articles')
+      .select('id, title, slug, description, image_url, category, tags, author, views, created_at, updated_at')
+      .eq('published', published)
+      .contains('tags', [slugAsReadable])
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    const { data: exactData2, error: exactError2 } = await exactQuery2;
+
+    if (!exactError2 && exactData2 && exactData2.length > 0) {
+      console.log(`✅ Found ${exactData2.length} articles with readable format match: "${slugAsReadable}"`);
+      return exactData2 as Article[];
+    }
+
+    // Fallback: Get articles and filter in memory with strict matching
+    // Only use this if database queries fail (handles edge cases)
+    console.log('⚠️ Database queries failed, using strict memory filter...');
     
     const fallbackQuery = supabaseAdmin
       .from('articles')
       .select('id, title, slug, description, image_url, category, tags, author, views, created_at, updated_at')
       .eq('published', published)
       .order('created_at', { ascending: false })
-      .limit(500);
+      .limit(200); // Reduced from 500 to save egress
 
     const { data: allData, error: fallbackError } = await fallbackQuery;
 
@@ -156,21 +194,26 @@ export const getArticlesByTagCached = unstable_cache(
       return [];
     }
 
-    // Smart filtering: match tag name or slug format
+    // Strict filtering: only exact matches (no partial matching)
     const filtered = (allData || []).filter((article) => {
       if (!article.tags || !Array.isArray(article.tags)) return false;
       
-      return article.tags.some((tag: string) => tagMatchesSlug(tag, tagSlug));
+      return article.tags.some((tag: string) => tagMatchesSlug(tag, normalizedSlug));
     });
 
-    console.log(`✅ Found ${filtered.length} articles with smart tag matching (from ${allData.length} total)`);
+    console.log(`✅ Found ${filtered.length} articles with strict tag matching (from ${allData.length} total)`);
     
-    // Log some matches for debugging
+    // Log matches for debugging
     if (filtered.length > 0 && filtered.length <= 10) {
       filtered.forEach(article => {
-        const matchingTags = article.tags.filter((tag: string) => tagMatchesSlug(tag, tagSlug));
-        console.log(`   - "${article.title}" (tags: ${matchingTags.join(', ')})`);
+        const matchingTags = article.tags.filter((tag: string) => tagMatchesSlug(tag, normalizedSlug));
+        console.log(`   - "${article.title}" (matching tags: ${matchingTags.join(', ')})`);
       });
+    } else if (filtered.length === 0) {
+      console.log(`   - No articles matched tag slug: "${normalizedSlug}"`);
+      if (allData.length > 0 && allData[0]?.tags) {
+        console.log(`   - Sample tags from first article: ${allData[0].tags.slice(0, 3).join(', ')}`);
+      }
     }
 
     return filtered as Article[];
@@ -187,6 +230,7 @@ export const getArticlesByTagCached = unstable_cache(
  */
 export const getArticleBySlugCached = unstable_cache(
   async (slug: string): Promise<Article | null> => {
+    // Use index on slug for faster lookup
     const { data, error } = await supabaseAdmin
       .from('articles')
       .select('*')
@@ -203,26 +247,29 @@ export const getArticleBySlugCached = unstable_cache(
       return null;
     }
 
-    // Increment views asynchronously (don't await)
-    Promise.resolve(
-      supabaseAdmin
-        .from('articles')
-        .update({ views: (data.views || 0) + 1 })
-        .eq('id', data.id)
-    )
-      .then(() => {
+    // Increment views asynchronously (don't await) - fire and forget
+    // Use setTimeout to avoid blocking
+    setTimeout(async () => {
+      try {
+        await supabaseAdmin
+          .from('articles')
+          .update({ views: (data.views || 0) + 1 })
+          .eq('id', data.id);
         // Success - views updated
-      })
-      .catch((viewError: any) => {
-        console.warn('Could not increment views:', viewError);
-      });
+      } catch (viewError: any) {
+        // Silently fail - views are not critical
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Could not increment views:', viewError);
+        }
+      }
+    }, 0);
 
     return data as Article;
   },
   ['article-by-slug'],
   {
     revalidate: CACHE_TTL,
-    tags: ['articles'],
+    tags: ['articles', 'article-by-slug'],
   }
 );
 
@@ -304,7 +351,7 @@ export const getPopularTagsCached = unstable_cache(
       .from('articles')
       .select('tags')
       .eq('published', true)
-      .limit(1000); // Sample to calculate popular tags
+      .limit(500); // Reduced from 1000 to save egress (still enough for popular tags)
 
     if (error) {
       console.error('Error fetching popular tags:', error);

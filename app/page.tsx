@@ -6,6 +6,7 @@ import { Newspaper, TrendingUp, Mail, Facebook, Youtube, Twitter, Tag as TagIcon
 import type { Metadata } from 'next';
 import { getCardBgClasses } from '@/lib/utils/card-colors';
 import { toSlug } from '@/lib/utils/slug';
+import Script from 'next/script';
 
 export const revalidate = 60; // Revalidate every 60 seconds
 
@@ -50,20 +51,30 @@ const categorySlugMap: Record<string, string> = {
 
 export default async function HomePage() {
   // Fetch articles by category in parallel (much more efficient than fetch all then filter)
+  // Use Promise.allSettled to prevent one slow category from blocking others
   const categoryPromises = CATEGORIES.map(cat => 
-    getArticlesByCategoryCached(cat, true)
+    getArticlesByCategoryCached(cat, true).catch(err => {
+      console.error(`Error fetching category ${cat}:`, err);
+      return []; // Return empty array on error
+    })
   );
   
-  const categoryResults = await Promise.all(categoryPromises);
+  const categoryResults = await Promise.allSettled(categoryPromises);
   
   // Group articles by category
   const articlesByCategory: Record<string, typeof categoryResults[0]> = {};
   CATEGORIES.forEach((cat, index) => {
-    articlesByCategory[cat] = categoryResults[index].slice(0, 10); // Limit 10 per category
+    const result = categoryResults[index];
+    if (result.status === 'fulfilled') {
+      articlesByCategory[cat] = result.value.slice(0, 10); // Limit 10 per category
+    } else {
+      articlesByCategory[cat] = []; // Empty array on error
+    }
   });
 
-  // Get popular tags (cached, separate optimized query)
-  const popularTags = await getPopularTagsCached(10);
+  // Get popular tags (cached, separate optimized query) - don't block page load
+  const popularTagsPromise = getPopularTagsCached(10).catch(() => []);
+  const popularTags = await popularTagsPromise;
 
   // Flatten all articles for sidebar sections (popular/recent)
   const allArticles = Object.values(articlesByCategory).flat();
@@ -343,8 +354,35 @@ export default async function HomePage() {
     }
   }
 
+  // Preload critical images for featured articles
+  const featuredArticles = allArticles
+    .sort((a, b) => b.views - a.views)
+    .slice(0, 4);
+  const criticalImages = featuredArticles
+    .slice(0, 2)
+    .map(a => a.image_url)
+    .filter((url): url is string => !!url);
+
   return (
     <div className="min-h-screen" suppressHydrationWarning>
+      {/* Preload critical images */}
+      {criticalImages.length > 0 && (
+        <Script id="preload-images" strategy="afterInteractive">
+          {`
+            (function() {
+              ${criticalImages.map((url, idx) => `
+                const link${idx} = document.createElement('link');
+                link${idx}.rel = 'preload';
+                link${idx}.as = 'image';
+                link${idx}.href = ${JSON.stringify(url)};
+                link${idx}.setAttribute('fetchpriority', 'high');
+                document.head.appendChild(link${idx});
+              `).join('')}
+            })();
+          `}
+        </Script>
+      )}
+      
       {/* Modern Hero Section */}
       <section className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-purple-800 text-white overflow-hidden">
         {/* Simple gradient background for better performance */}
@@ -393,10 +431,6 @@ export default async function HomePage() {
         
         {/* Featured Articles Section */}
         {(() => {
-          const featuredArticles = allArticles
-            .sort((a, b) => b.views - a.views)
-            .slice(0, 4);
-          
           return featuredArticles.length > 0 ? (
             <section className="mb-12">
             <div className="flex items-center gap-3 mb-6">
@@ -407,12 +441,14 @@ export default async function HomePage() {
               <div className="h-0.5 flex-1 bg-gradient-to-r from-orange-500 to-transparent"></div>
             </div>
             
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {featuredArticles.map((article, idx) => (
                   <Link
                     key={article.id}
                     href={`/articles/${article.slug}`}
                     className="group block"
+                    prefetch={idx < 2} // Prefetch first 2 articles
                   >
                     <article className={`${getCardBgClasses(article.id)} border border-gray-200/50 rounded-xl overflow-hidden hover:shadow-xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 shadow-md h-full`}>
                       {article.image_url && (

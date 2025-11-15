@@ -7,6 +7,7 @@ export interface Article {
   image_url?: string;
   category: string;
   tags: string[];
+  main_keyword?: string; // Primary keyword for autolink feature
   author: string;
   published: boolean;
   views: number;
@@ -22,6 +23,7 @@ export interface CreateArticleInput {
   image_url?: string;
   category: string;
   tags: string[];
+  main_keyword?: string; // Primary keyword for autolink feature
   author: string;
   published: boolean;
 }

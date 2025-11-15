@@ -97,7 +97,7 @@ function getGoogleAIKeys(): string[] {
 // Track round-robin index for caption generation keys
 let currentCaptionKeyIndex = 0;
 const exhaustedCaptionKeys = new Map<string, number>();
-const CAPTION_EXHAUST_TTL_MS = 15 * 60 * 1000;
+const CAPTION_EXHAUST_TTL_MS = 5 * 60 * 1000; // 5 minutes (reduced from 15 to allow faster recovery)
 
 function isCaptionKeyExhausted(key: string): boolean {
   const expireAt = exhaustedCaptionKeys.get(key);
@@ -108,8 +108,19 @@ function isCaptionKeyExhausted(key: string): boolean {
   }
   return true;
 }
+
 function markCaptionKeyExhausted(key: string) {
   exhaustedCaptionKeys.set(key, Date.now() + CAPTION_EXHAUST_TTL_MS);
+}
+
+// Clean up expired exhausted keys
+function cleanupCaptionExhaustedKeys() {
+  const now = Date.now();
+  for (const [key, expireAt] of exhaustedCaptionKeys.entries()) {
+    if (now > expireAt) {
+      exhaustedCaptionKeys.delete(key);
+    }
+  }
 }
 
 // Helper function to generate meaningful image caption AND alt text using AI
@@ -169,19 +180,37 @@ ALT: Cristiano Ronaldo bóng đá
 
 Trả về NGAY theo format (KHÔNG giải thích):`;
 
+    // Clean up expired exhausted keys before starting
+    cleanupCaptionExhaustedKeys();
+    
     // Try each key until one succeeds (round-robin rotation)
     let result;
     let response;
     let lastError;
+    
+    // Count how many keys are available (not exhausted)
+    const availableCaptionKeys = googleApiKeys.filter(key => !isCaptionKeyExhausted(key));
+    const allCaptionKeysExhausted = availableCaptionKeys.length === 0;
+    
+    if (allCaptionKeysExhausted) {
+      console.log('⚠️ All caption keys are exhausted, but will force retry anyway (may have reset)...');
+      // Clear all exhausted flags to force retry
+      exhaustedCaptionKeys.clear();
+    }
     
     for (let attempt = 0; attempt < googleApiKeys.length; attempt++) {
       const keyIndex = (currentCaptionKeyIndex + attempt) % googleApiKeys.length;
       const selectedKey = googleApiKeys[keyIndex];
       const keyNumber = keyIndex + 1;
 
-      if (isCaptionKeyExhausted(selectedKey)) {
+      // Skip temporarily exhausted keys (unless all are exhausted, then force retry)
+      if (!allCaptionKeysExhausted && isCaptionKeyExhausted(selectedKey)) {
         console.log(`⏭️ Skipping Caption Key #${keyNumber} (temporarily exhausted)`);
         continue;
+      }
+      
+      if (allCaptionKeysExhausted) {
+        console.log(`🔄 Force retrying Caption Key #${keyNumber} (all keys were exhausted, may have reset)...`);
       }
       
       try {
@@ -711,6 +740,7 @@ export async function POST(request: NextRequest) {
         let finalContent = content;
         let finalDescription = description.substring(0, 500);
         let aiTags: string[] = [];
+        let mainKeyword: string | null = null;
         
         console.log('🔍 Checking AI Rewrite conditions:');
         console.log('  - aiRewrite flag:', aiRewrite);
@@ -736,7 +766,7 @@ export async function POST(request: NextRequest) {
                     content,
                     tone: 'professional',
                     provider: aiProvider,
-                    generateMetadata: true, // AI tạo title + description
+                    generateMetadata: true, // AI tạo title + description + main_keyword
                   }),
                 });
 
@@ -767,6 +797,12 @@ export async function POST(request: NextRequest) {
                 if (rewriteData.tags && Array.isArray(rewriteData.tags) && rewriteData.tags.length > 0) {
                   aiTags = rewriteData.tags;
                   console.log(`🏷️ Using AI-generated tags:`, aiTags);
+                }
+                
+                // Use AI-generated main keyword for autolink
+                if (rewriteData.mainKeyword) {
+                  mainKeyword = rewriteData.mainKeyword.toLowerCase().trim();
+                  console.log(`🔗 Using AI-generated main keyword: ${mainKeyword}`);
                 }
                 
                 console.log(`✅ AI Rewrite SUCCESS!`);
@@ -853,6 +889,7 @@ export async function POST(request: NextRequest) {
             author,
             published: false, // Set to false for manual review
             tags: aiTags.length > 0 ? aiTags : [],
+            main_keyword: mainKeyword || null, // Main keyword for autolink feature
           })
           .select()
           .single();

@@ -19,6 +19,7 @@ export default function ArticleForm({ initialData, onSubmit, loading }: ArticleF
     image_url: initialData?.image_url || '',
     category: initialData?.category || 'Công nghệ',
     tags: initialData?.tags || [],
+    main_keyword: initialData?.main_keyword || '',
     author: initialData?.author || 'Admin',
     published: initialData?.published ?? true,
   });
@@ -198,6 +199,25 @@ export default function ArticleForm({ initialData, onSubmit, loading }: ArticleF
             <option value="Game">Ctrl Z Game</option>
             <option value="Tin Nóng">Ctrl Z Tin Nóng</option>
           </select>
+        </div>
+
+        {/* Main Keyword */}
+        <div>
+          <label htmlFor="main_keyword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Từ khóa chính (cho Autolink)
+          </label>
+          <input
+            type="text"
+            id="main_keyword"
+            name="main_keyword"
+            value={formData.main_keyword || ''}
+            onChange={handleChange}
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            placeholder="VD: iphone 15, ô nhiễm không khí, bệnh zona"
+          />
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Từ khóa chính của bài viết. Các bài viết khác đề cập đến từ khóa này sẽ tự động link về bài này.
+          </p>
         </div>
 
         {/* Tags */}

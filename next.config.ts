@@ -21,6 +21,18 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: '*.vnecdn.net', // VnExpress CDN
+      },
+      {
+        protocol: 'https',
+        hostname: '*.vnexpress.net', // VnExpress
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.vinmec.com', // Vinmec images
+      },
+      {
+        protocol: 'https',
         hostname: '**', // Allow all hostnames for development
       },
     ],

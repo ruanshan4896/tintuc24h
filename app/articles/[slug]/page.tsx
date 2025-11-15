@@ -14,6 +14,7 @@ import { getCategorySlug, toSlug } from '@/lib/utils/slug';
 import { getCardBgClasses } from '@/lib/utils/card-colors';
 import { Gift } from 'lucide-react';
 import { getCategoryDisplayName } from '@/lib/constants';
+import { getKeywordLinks, applyAutolinks } from '@/lib/utils/autolink';
 
 // Helper functions for image proxy
 function needsProxy(url: string): boolean {
@@ -147,6 +148,16 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     article.category,
     article.tags || [],
     4
+  );
+
+  // Get keyword links for autolink feature
+  const keywordLinks = await getKeywordLinks();
+  
+  // Apply autolinks to content (link keywords to other articles)
+  const contentWithAutolinks = applyAutolinks(
+    article.content,
+    keywordLinks,
+    article.slug // Exclude current article from linking
   );
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tintuc24h-seven.vercel.app';
@@ -326,7 +337,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                     },
                   }}
                 >
-                  {article.content}
+                  {contentWithAutolinks}
                 </ReactMarkdown>
               </div>
 

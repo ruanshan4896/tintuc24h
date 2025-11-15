@@ -35,7 +35,7 @@ function getGoogleAIKeys(): string[] {
 let currentKeyIndex = 0;
 // Track temporarily exhausted keys (quota) with TTL
 const exhaustedKeys = new Map<string, number>(); // key -> expireAt (ms)
-const EXHAUST_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const EXHAUST_TTL_MS = 5 * 60 * 1000; // 5 minutes (reduced from 15 to allow faster recovery)
 
 function isKeyExhausted(key: string): boolean {
   const expireAt = exhaustedKeys.get(key);
@@ -49,6 +49,16 @@ function isKeyExhausted(key: string): boolean {
 
 function markKeyExhausted(key: string) {
   exhaustedKeys.set(key, Date.now() + EXHAUST_TTL_MS);
+}
+
+// Clean up expired exhausted keys
+function cleanupExhaustedKeys() {
+  const now = Date.now();
+  for (const [key, expireAt] of exhaustedKeys.entries()) {
+    if (now > expireAt) {
+      exhaustedKeys.delete(key);
+    }
+  }
 }
 
 // Clean up markdown output from AI (remove code fence wrappers)
@@ -388,15 +398,16 @@ ${content}
 ---
 
 ${generateMetadata ? `
-**QUAN TRỌNG - TẠO METADATA SEO + TAGS:**
+**QUAN TRỌNG - TẠO METADATA SEO + TAGS + MAIN_KEYWORD:**
 
-Sau khi viết xong bài, thêm 3 dòng cuối cùng (bắt đầu với "---"):
+Sau khi viết xong bài, thêm 4 dòng cuối cùng (bắt đầu với "---"):
 
 \`\`\`
 ---
 SEO_TITLE: [Tiêu đề SEO mới 50-60 ký tự, KHÁC BẢN GỐC, có keyword]
 SEO_DESC: [Mô tả ngắn gọn 140-155 ký tự, tóm tắt nội dung chính, có CTA]
 TAGS: [tag1, tag2, tag3, tag4, tag5]
+MAIN_KEYWORD: [từ khóa chính 1-3 từ, VD: "iphone 15", "ô nhiễm không khí", "bệnh zona"]
 \`\`\`
 
 **YÊU CẦU:**
@@ -421,6 +432,13 @@ TAGS: [tag1, tag2, tag3, tag4, tag5]
   - Ví dụ: [iphone 15, smartphone, review, công nghệ, mua sắm]
   - KHÔNG dùng hashtag (#)
   
+- **MAIN_KEYWORD (TỪ KHÓA CHÍNH CHO AUTOLINK):**
+  - 1-3 từ, viết thường, ngắn gọn
+  - Đây là từ khóa chính mà bài viết này giải quyết
+  - Các bài viết khác đề cập đến từ khóa này sẽ tự động link về bài này
+  - Ví dụ: "iphone 15", "ô nhiễm không khí", "bệnh zona", "vinfast vf 7"
+  - Phải là từ khóa cụ thể, không quá chung chung
+  
 - Đặt ở CUỐI CÙNG của bài viết (sau [IMAGE_PLACEHOLDER_3] nếu có)
 
 **VÍ DỤ:**
@@ -431,6 +449,7 @@ TAGS: [tag1, tag2, tag3, tag4, tag5]
 SEO_TITLE: Ô Nhiễm Hà Nội Vượt 215 AQI: Cách Bảo Vệ Sức Khỏe
 SEO_DESC: Chỉ số AQI Hà Nội vượt mức an toàn 2,5 lần. Tìm hiểu tác động và biện pháp phòng tránh hiệu quả cho gia đình bạn.
 TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
+MAIN_KEYWORD: ô nhiễm không khí
 \`\`\`
 ` : ''}`;
 
@@ -453,6 +472,19 @@ TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
       let lastError;
       let successfulKeyIndex = -1;
       
+      // Clean up expired exhausted keys before starting
+      cleanupExhaustedKeys();
+      
+      // Count how many keys are available (not exhausted)
+      const availableKeys = googleApiKeys.filter(key => !isKeyExhausted(key));
+      const allKeysExhausted = availableKeys.length === 0;
+      
+      if (allKeysExhausted) {
+        console.log('⚠️  All keys are exhausted, but will force retry anyway (may have reset)...');
+        // Clear all exhausted flags to force retry
+        exhaustedKeys.clear();
+      }
+      
       // Try each key until one succeeds
       for (let keyAttempt = 0; keyAttempt < googleApiKeys.length; keyAttempt++) {
         // Calculate which key to try (start from current position)
@@ -460,10 +492,14 @@ TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
         const keyNumber = keyIndex + 1;
         const selectedKey = googleApiKeys[keyIndex];
         
-        // Skip temporarily exhausted keys
-        if (isKeyExhausted(selectedKey)) {
+        // Skip temporarily exhausted keys (unless all are exhausted, then force retry)
+        if (!allKeysExhausted && isKeyExhausted(selectedKey)) {
           console.log(`⏭️  Skipping Key #${keyNumber} (temporarily exhausted)`);
           continue;
+        }
+        
+        if (allKeysExhausted) {
+          console.log(`🔄 Force retrying Key #${keyNumber} (all keys were exhausted, may have reset)...`);
         }
 
         console.log(`🔑 Trying Key #${keyNumber} of ${googleApiKeys.length}...`);
@@ -620,6 +656,7 @@ TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
     let seoTitle = '';
     let seoDescription = '';
     let tags: string[] = [];
+    let mainKeyword = '';
     let finalContent = rewrittenContent;
 
     if (generateMetadata) {
@@ -629,14 +666,16 @@ TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
       // SEO_TITLE: ...
       // SEO_DESC: ...
       // TAGS: [...]
+      // MAIN_KEYWORD: ...
       // ---  (optional)
-      const metadataRegex = /---[\s\n]*SEO_TITLE:\s*(.+?)[\s\n]+SEO_DESC:\s*(.+?)[\s\n]+TAGS:\s*\[(.+?)\][\s\n]*(?:---)?[\s\n]*$/;
+      const metadataRegex = /---[\s\n]*SEO_TITLE:\s*(.+?)[\s\n]+SEO_DESC:\s*(.+?)[\s\n]+TAGS:\s*\[(.+?)\][\s\n]+MAIN_KEYWORD:\s*(.+?)[\s\n]*(?:---)?[\s\n]*$/;
       const metadataMatch = rewrittenContent.match(metadataRegex);
       
       if (metadataMatch) {
         seoTitle = metadataMatch[1].trim();
         seoDescription = metadataMatch[2].trim();
         const tagsString = metadataMatch[3].trim();
+        mainKeyword = metadataMatch[4].trim().toLowerCase();
         
         // Parse tags
         tags = tagsString
@@ -651,6 +690,7 @@ TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
         console.log('  - SEO Title:', seoTitle);
         console.log('  - SEO Desc:', seoDescription);
         console.log('  - Tags:', tags);
+        console.log('  - Main Keyword:', mainKeyword);
       } else {
         console.warn('⚠️ Could not extract metadata from AI response');
         console.log('Last 500 chars of content:', rewrittenContent.slice(-500));
@@ -673,6 +713,7 @@ TAGS: [ô nhiễm không khí, hà nội, sức khỏe, môi trường, who]
       seoTitle: seoTitle || title, // Fallback to original if not generated
       seoDescription,
       tags,
+      mainKeyword: mainKeyword || null, // Main keyword for autolink feature
       originalLength: content.length,
       rewrittenLength: finalContent.length,
       tokensUsed,
