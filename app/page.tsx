@@ -7,6 +7,7 @@ import type { Metadata } from 'next';
 import { getCardBgClasses } from '@/lib/utils/card-colors';
 import { toSlug } from '@/lib/utils/slug';
 import Script from 'next/script';
+import type { Article } from '@/lib/types/article';
 
 export const revalidate = 60; // Revalidate every 60 seconds
 
@@ -62,7 +63,7 @@ export default async function HomePage() {
   const categoryResults = await Promise.allSettled(categoryPromises);
   
   // Group articles by category
-  const articlesByCategory: Record<string, typeof categoryResults[0]> = {};
+  const articlesByCategory: Record<string, Article[]> = {};
   CATEGORIES.forEach((cat, index) => {
     const result = categoryResults[index];
     if (result.status === 'fulfilled') {
