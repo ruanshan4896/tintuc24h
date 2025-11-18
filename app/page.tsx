@@ -355,34 +355,11 @@ export default async function HomePage() {
     }
   }
 
-  // Preload critical images for featured articles
-  const featuredArticles = allArticles
-    .sort((a, b) => b.views - a.views)
-    .slice(0, 4);
-  const criticalImages = featuredArticles
-    .slice(0, 2)
-    .map(a => a.image_url)
-    .filter((url): url is string => !!url);
+
 
   return (
     <div className="min-h-screen" suppressHydrationWarning>
-      {/* Preload critical images */}
-      {criticalImages.length > 0 && (
-        <Script id="preload-images" strategy="afterInteractive">
-          {`
-            (function() {
-              ${criticalImages.map((url, idx) => `
-                const link${idx} = document.createElement('link');
-                link${idx}.rel = 'preload';
-                link${idx}.as = 'image';
-                link${idx}.href = ${JSON.stringify(url)};
-                link${idx}.setAttribute('fetchpriority', 'high');
-                document.head.appendChild(link${idx});
-              `).join('')}
-            })();
-          `}
-        </Script>
-      )}
+
       
       {/* Modern Hero Section */}
       <section className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-purple-800 text-white overflow-hidden">
@@ -429,62 +406,6 @@ export default async function HomePage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Magazine Style Layout */}
-        
-        {/* Featured Articles Section */}
-        {(() => {
-          return featuredArticles.length > 0 ? (
-            <section className="mb-12">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full text-sm font-bold shadow-lg">
-                <TrendingUp className="w-4 h-4" />
-                TIN NỔI BẬT
-              </div>
-              <div className="h-0.5 flex-1 bg-gradient-to-r from-orange-500 to-transparent"></div>
-            </div>
-            
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {featuredArticles.map((article, idx) => (
-                  <Link
-                    key={article.id}
-                    href={`/articles/${article.slug}`}
-                    className="group block"
-                    prefetch={idx < 2} // Prefetch first 2 articles
-                  >
-                    <article className={`${getCardBgClasses(article.id)} border border-gray-200/50 rounded-xl overflow-hidden hover:shadow-xl hover:border-blue-300/50 hover:-translate-y-1 transition-all duration-300 shadow-md h-full`}>
-                      {article.image_url && (
-                        <div className="relative h-40 overflow-hidden">
-                          <OptimizedImage
-                            src={article.image_url}
-                            alt={article.title}
-                            fill
-                            className="object-cover transition-opacity duration-300"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                            objectFit="cover"
-                            loading={idx < 2 ? "eager" : "lazy"}
-                            priority={idx < 2}
-                            quality={80}
-                          />
-                        </div>
-                      )}
-                      <div className="p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-semibold rounded">
-                            {getCategoryDisplayName(article.category)}
-                          </span>
-                          <span className="text-xs text-gray-500">{article.views} lượt xem</span>
-                        </div>
-                        <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 text-sm">
-                          {article.title}
-                        </h3>
-                      </div>
-                    </article>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          ) : null;
-        })()}
 
         {/* Magazine Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
