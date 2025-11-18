@@ -5,7 +5,11 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '*.supabase.co', // Primary: Supabase Storage
+        hostname: 'pzakjiqhksdwugvfosvl.supabase.co', // Exact Supabase project
+      },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co', // All Supabase projects
       },
       {
         protocol: 'https',
@@ -16,12 +20,12 @@ const nextConfig: NextConfig = {
         hostname: '**', // Allow all for development/migration
       },
     ],
-    formats: ['image/avif', 'image/webp'], // Modern formats
+    formats: ['image/webp', 'image/avif'], // WebP first (better support)
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    minimumCacheTTL: 31536000, // 1 year cache
-    // Enable optimization for Supabase images
-    unoptimized: false,
+    minimumCacheTTL: 60, // 1 minute (avoid Vercel limits)
+    // Disable optimization to avoid Vercel limits and AVIF issues
+    unoptimized: true,
   },
   experimental: {
     optimizePackageImports: ['react-markdown', 'date-fns', 'lucide-react', '@vercel/analytics', '@vercel/speed-insights'],

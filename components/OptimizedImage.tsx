@@ -65,9 +65,6 @@ export default function OptimizedImage({
 
   const finalClassName = `${objectFitClass} ${className}`.trim();
 
-  // Check if image is from Supabase Storage (no need for unoptimized)
-  const isSupabaseStorage = imgSrc.includes('supabase.co') && imgSrc.includes('/storage/v1/object/public/');
-  
   // For inline/markdown context
   if (inline && !fill) {
     return (
@@ -83,7 +80,7 @@ export default function OptimizedImage({
         loading={loading}
         onError={handleError}
         onLoad={handleLoad}
-        unoptimized={!isSupabaseStorage} // Only optimize Supabase images
+        unoptimized // Always unoptimized (AVIF already optimized)
       />
     );
   }
@@ -126,7 +123,7 @@ export default function OptimizedImage({
           loading={loading}
           onError={handleError}
           onLoad={handleLoad}
-          unoptimized={!isSupabaseStorage}
+          unoptimized // Always unoptimized (AVIF already optimized)
         />
       ) : (
         <Image
@@ -141,7 +138,7 @@ export default function OptimizedImage({
           loading={loading}
           onError={handleError}
           onLoad={handleLoad}
-          unoptimized={!isSupabaseStorage}
+          unoptimized // Always unoptimized (AVIF already optimized)
         />
       )}
     </div>
