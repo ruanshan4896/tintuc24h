@@ -4,6 +4,7 @@ import { scrapeFullArticle, extractMainImage } from '@/lib/utils/scraper';
 import { getCategorySlug, toSlug } from '@/lib/utils/slug';
 import { triggerRevalidate } from '@/lib/api/revalidate';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { uploadImageToSupabase, isSupabaseStorageUrl, uploadContentImages } from '@/lib/utils/image-upload';
 
 // Increase timeout for scraping + AI processing
 export const maxDuration = 60; // seconds
@@ -472,6 +473,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Upload image to Supabase Storage if it's from external source
+    if (chosenImage && !isSupabaseStorageUrl(chosenImage)) {
+      console.log('📤 Uploading image to Supabase Storage...');
+      try {
+        const supabaseImageUrl = await uploadImageToSupabase(
+          chosenImage,
+          slug,
+          'featured',
+          { format: 'avif', quality: 80 }
+        );
+        
+        if (supabaseImageUrl) {
+          console.log(`✅ Image uploaded successfully: ${supabaseImageUrl}`);
+          chosenImage = supabaseImageUrl;
+        } else {
+          console.warn('⚠️ Image upload failed, using original URL');
+        }
+      } catch (uploadError: any) {
+        console.error('❌ Image upload error:', uploadError.message);
+        console.warn('⚠️ Using original image URL');
+      }
+    }
+
     if (chosenImage) {
       const { caption, alt } = await generateImageCaptionAndAlt(title);
       const singleImageMarkdown = `\n\n![${alt}](${chosenImage})\n*${caption}*\n`;
@@ -500,6 +524,10 @@ export async function POST(request: NextRequest) {
 
     // Remove any remaining placeholders (if any)
     finalContent = finalContent.replace(/\[IMAGE_PLACEHOLDER_\d+\]/g, '');
+
+    // Upload all images in content to Supabase Storage
+    console.log('🖼️  Processing images in content...');
+    finalContent = await uploadContentImages(finalContent, slug);
 
     // Prepare article data - GIỐNG HỆT RSS FETCH
     const articleData = {

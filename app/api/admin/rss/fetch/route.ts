@@ -7,6 +7,7 @@ import { scrapeFullArticle, extractMainImage } from '@/lib/utils/scraper';
 import { getCategorySlug, toSlug } from '@/lib/utils/slug';
 import { triggerRevalidate } from '@/lib/api/revalidate';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { uploadImageToSupabase, isSupabaseStorageUrl, uploadContentImages } from '@/lib/utils/image-upload';
 
 // Increase route timeout for RSS fetching + AI processing (Vercel allows up to 60s on Hobby plan)
 export const maxDuration = 60; // seconds
@@ -845,6 +846,29 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        // Upload featured image to Supabase Storage if it's from external source
+        if (chosenImage && !isSupabaseStorageUrl(chosenImage)) {
+          console.log('📤 Uploading featured image to Supabase Storage...');
+          try {
+            const supabaseImageUrl = await uploadImageToSupabase(
+              chosenImage,
+              slug,
+              'featured',
+              { format: 'avif', quality: 80 }
+            );
+            
+            if (supabaseImageUrl) {
+              console.log(`✅ Featured image uploaded: ${supabaseImageUrl}`);
+              chosenImage = supabaseImageUrl;
+            } else {
+              console.warn('⚠️ Featured image upload failed, using original URL');
+            }
+          } catch (uploadError: any) {
+            console.error('❌ Featured image upload error:', uploadError.message);
+            console.warn('⚠️ Using original image URL');
+          }
+        }
+
         if (chosenImage) {
           const { caption, alt } = await generateImageCaptionAndAlt(title);
           const singleImageMarkdown = `\n\n![${alt}](${chosenImage})\n*${caption}*\n`;
@@ -875,6 +899,10 @@ export async function POST(request: NextRequest) {
 
         // Remove any remaining placeholders (if any)
         finalContent = finalContent.replace(/\[IMAGE_PLACEHOLDER_\d+\]/g, '');
+
+        // Upload all images in content to Supabase Storage
+        console.log('🖼️  Processing images in content...');
+        finalContent = await uploadContentImages(finalContent, slug);
 
         // Create article
         const { data: article, error: articleError } = await supabaseAdmin

@@ -5,39 +5,23 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'images.unsplash.com',
+        hostname: '*.supabase.co', // Primary: Supabase Storage
       },
       {
         protocol: 'https',
-        hostname: '*.supabase.co',
+        hostname: 'images.unsplash.com', // Fallback: Unsplash
       },
       {
         protocol: 'https',
-        hostname: 'vipwin358.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'lh3.googleusercontent.com',
-      },
-      {
-        protocol: 'https',
-        hostname: '*.vnecdn.net', // VnExpress CDN
-      },
-      {
-        protocol: 'https',
-        hostname: '*.vnexpress.net', // VnExpress
-      },
-      {
-        protocol: 'https',
-        hostname: 'www.vinmec.com', // Vinmec images
-      },
-      {
-        protocol: 'https',
-        hostname: '**', // Allow all hostnames for development
+        hostname: '**', // Allow all for development/migration
       },
     ],
-    // Disable image optimization to avoid Vercel limits
-    unoptimized: true,
+    formats: ['image/avif', 'image/webp'], // Modern formats
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 31536000, // 1 year cache
+    // Enable optimization for Supabase images
+    unoptimized: false,
   },
   experimental: {
     optimizePackageImports: ['react-markdown', 'date-fns', 'lucide-react', '@vercel/analytics', '@vercel/speed-insights'],
