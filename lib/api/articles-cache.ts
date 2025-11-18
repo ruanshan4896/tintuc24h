@@ -41,11 +41,12 @@ export const getArticlesCached = cache(async (published = true): Promise<Article
 export const getArticlesByCategoryCached = unstable_cache(
   async (category: string, published = true): Promise<Article[]> => {
     // Optimized query - only select needed fields, use index
+    // Order by created_at DESC (newest first)
     const query = supabaseAdmin
       .from('articles')
       .select('id, title, slug, description, image_url, category, tags, author, views, created_at, updated_at')
       .eq('category', category)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: false }) // Newest first
       .limit(50); // Limit per category
 
     if (published) {
