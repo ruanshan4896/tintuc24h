@@ -36,14 +36,8 @@ const nextConfig: NextConfig = {
         hostname: '**', // Allow all hostnames for development
       },
     ],
-    formats: ['image/avif', 'image/webp'],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-          minimumCacheTTL: 86400, // 24 hours cache for better performance
-    dangerouslyAllowSVG: true,
-    contentDispositionType: 'attachment',
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
-    unoptimized: false,
+    // Disable image optimization to avoid Vercel limits
+    unoptimized: true,
   },
   experimental: {
     optimizePackageImports: ['react-markdown', 'date-fns', 'lucide-react', '@vercel/analytics', '@vercel/speed-insights'],
