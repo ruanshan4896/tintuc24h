@@ -135,6 +135,13 @@ export default function RootLayout({
 
   return (
     <html lang="vi">
+      <head>
+        {/* Preconnect to Google Drive for faster image loading */}
+        <link rel="preconnect" href="https://lh3.googleusercontent.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://lh3.googleusercontent.com" />
+        <link rel="preconnect" href="https://drive.google.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://drive.google.com" />
+      </head>
       <body suppressHydrationWarning className={inter.className}>
         {/* Structured Data - Organization */}
         <Script

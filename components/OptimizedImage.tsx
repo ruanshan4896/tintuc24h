@@ -43,6 +43,8 @@ function needsProxy(url: string): boolean {
   }
 }
 
+
+
 /**
  * Convert image URL to proxy URL if needed
  */
@@ -70,8 +72,9 @@ function OptimizedImage({
   onError,
   inline = false,
 }: OptimizedImageProps) {
-  // Memoize proxy URL to avoid recalculating on every render
+  // Memoize proxy URL - keep Google Drive URLs as-is
   const proxiedSrc = useMemo(() => {
+    // Don't modify Google Drive URLs - they work as-is
     return needsProxy(src) ? getProxyUrl(src) : src;
   }, [src]);
   
@@ -100,18 +103,22 @@ function OptimizedImage({
       return;
     }
     
-    // Faster fallback - skip retry for non-priority images to improve UX
-    if (priority && retryAttempts < retryCount && imgSrc !== fallbackSrc) {
-      // Only retry for priority images
-      const delay = 300; // Reduced delay for faster fallback
+    // Check if it's a Google Drive image
+    const isGoogleDrive = imgSrc.includes('googleusercontent.com') || imgSrc.includes('drive.google.com');
+    
+    // For Google Drive images, retry fewer times with shorter delays (they're usually reliable)
+    const maxRetries = isGoogleDrive ? 2 : retryCount;
+    const retryDelay = isGoogleDrive ? 500 : 300;
+    
+    // Retry logic
+    if (retryAttempts < maxRetries && imgSrc !== fallbackSrc) {
       timeoutRef.current = setTimeout(() => {
         if (process.env.NODE_ENV === 'development') {
-          console.log(`🔄 Retrying image load (attempt ${retryAttempts + 1}/${retryCount})...`);
+          console.log(`🔄 Retrying image load (attempt ${retryAttempts + 1}/${maxRetries})...`);
         }
         setRetryAttempts(prev => prev + 1);
-        setImgSrc(proxiedSrc);
-        setIsLoading(true);
-      }, delay);
+        setImgSrc(proxiedSrc); // Retry with original URL
+      }, retryDelay);
     } else if (imgSrc !== fallbackSrc) {
       // Switch to fallback immediately for non-priority, or after retry for priority
       if (process.env.NODE_ENV === 'development') {
@@ -167,18 +174,25 @@ function OptimizedImage({
       setRetryAttempts(0);
       hasLoadedRef.current = false; // Reset loaded state for new image
       
-      // Set timeout for new image - reduced for faster fallback
-      timeoutRef.current = setTimeout(() => {
-        setIsLoading(prev => {
-          if (prev && !hasLoadedRef.current) {
-            if (process.env.NODE_ENV === 'development') {
-              console.warn(`⏱️ Image load timeout (3s) for: ${src}`);
+      // Set timeout for new image
+      const isGoogleDrive = src.includes('googleusercontent.com') || src.includes('drive.google.com');
+      
+      // No timeout for Google Drive images - they can be slow but reliable
+      // Only set timeout for other images
+      if (!isGoogleDrive) {
+        const timeoutDuration = 3000; // 3s for non-Google Drive images
+        timeoutRef.current = setTimeout(() => {
+          setIsLoading(prev => {
+            if (prev && !hasLoadedRef.current) {
+              if (process.env.NODE_ENV === 'development') {
+                console.warn(`⏱️ Image load timeout (${timeoutDuration/1000}s) for: ${src}`);
+              }
+              handleError();
             }
-            handleError();
-          }
-          return prev;
-        });
-      }, 3000); // 3 second timeout (reduced from 4s)
+            return prev;
+          });
+        }, timeoutDuration);
+      }
     }
     
     return () => {
@@ -224,7 +238,7 @@ function OptimizedImage({
           onLoadingComplete={handleLoad} // Additional callback for Next.js Image
           placeholder={priority ? "blur" : "empty"}
           blurDataURL={priority ? "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQ3NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiLz4=" : undefined}
-          unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('lh3.googleusercontent.com') || imgSrc.includes('/api/image-proxy') || imgSrc.startsWith('data:')}
+          unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('drive.google.com') || imgSrc.includes('/api/image-proxy') || imgSrc.startsWith('data:')}
         />
         {hasError && !isLoading && imgSrc === fallbackSrc && (
           <span className="inline-block text-xs text-gray-500 ml-2">Không thể tải ảnh</span>
@@ -281,7 +295,7 @@ function OptimizedImage({
           onLoadingComplete={handleLoad} // Additional callback for Next.js Image
           placeholder={priority ? "blur" : "empty"}
           blurDataURL={priority ? "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQ3NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiLz4=" : undefined}
-          unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('lh3.googleusercontent.com') || imgSrc.includes('/api/image-proxy') || imgSrc.startsWith('data:')}
+          unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('drive.google.com') || imgSrc.includes('/api/image-proxy') || imgSrc.startsWith('data:')}
         />
       ) : (
         <Image
@@ -299,7 +313,7 @@ function OptimizedImage({
           onLoadingComplete={handleLoad} // Additional callback for Next.js Image
           placeholder={priority ? "blur" : "empty"}
           blurDataURL={priority ? "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQ3NSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiLz4=" : undefined}
-          unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('lh3.googleusercontent.com') || imgSrc.includes('/api/image-proxy') || imgSrc.startsWith('data:')}
+          unoptimized={imgSrc.includes('googleusercontent.com') || imgSrc.includes('drive.google.com') || imgSrc.includes('/api/image-proxy') || imgSrc.startsWith('data:')}
         />
       )}
     </div>

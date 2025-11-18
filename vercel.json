@@ -38,15 +38,15 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://va.vercel-scripts.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self';"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob: https://*.googleusercontent.com; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://va.vercel-scripts.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self';"
         },
         {
           "key": "Cross-Origin-Opener-Policy",
-          "value": "same-origin-allow-popups"
+          "value": "unsafe-none"
         },
         {
           "key": "Cross-Origin-Embedder-Policy",
-          "value": "credentialless"
+          "value": "unsafe-none"
         }
       ]
     },
