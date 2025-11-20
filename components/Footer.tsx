@@ -37,6 +37,18 @@ export default function Footer() {
             >
               HB88
             </a>
+            <a 
+              href="https://23win.travel/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-gray-400 hover:text-white transition-colors duration-200"
+            >23win.travel</a>
+            <a 
+              href="https://uk88online.com/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-gray-400 hover:text-white transition-colors duration-200"
+            >https://uk88online.com/</a>
           </div>
         </div>
 
