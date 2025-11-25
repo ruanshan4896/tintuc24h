@@ -48,7 +48,12 @@ export default function Footer() {
               target="_blank" 
               rel="noopener noreferrer"
               className="text-gray-400 hover:text-white transition-colors duration-200"
-            >https://uk88online.com/</a>
+            >https://hi888vip.com/</a><a 
+              href="https://uk88online.com/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-gray-400 hover:text-white transition-colors duration-200"
+            >Hi888Vip</a>
           </div>
         </div>
 
