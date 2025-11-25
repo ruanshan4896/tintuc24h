@@ -3,9 +3,9 @@ import { getArticlesServer } from '@/lib/api/articles-server';
 
 /**
  * Post Sitemap - All articles/posts
- * Updates every hour with ISR
+ * Updates every 60 seconds with ISR
  */
-export const revalidate = 3600; // 1 hour
+export const revalidate = 60; // 1 minute (faster updates for new posts)
 
 export async function GET() {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tintuc.vercel.app';
@@ -81,7 +81,7 @@ ${urls}
       status: 200,
       headers: {
         'Content-Type': 'application/xml',
-        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=3600',
       },
     });
   } catch (error: any) {
